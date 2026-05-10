@@ -6,6 +6,7 @@ import { z } from "zod";
 import { InvoiceKind, InvoiceStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireCapability } from "@/lib/guards";
+import { logAudit } from "@/lib/audit";
 
 const lineSchema = z.object({
   description: z.string().min(1).max(500),
@@ -32,7 +33,7 @@ async function nextInvoiceNumber(): Promise<string> {
 }
 
 export async function createInvoice(formData: FormData) {
-  await requireCapability("finance.write");
+  const session = await requireCapability("finance.write");
   const lineCount = Number.parseInt((formData.get("lineCount") as string) ?? "1", 10);
   const lines = Array.from({ length: lineCount }, (_, i) => ({
     description: String(formData.get(`line-${i}-description`) ?? ""),
@@ -78,26 +79,34 @@ export async function createInvoice(formData: FormData) {
     },
   });
 
+  await logAudit(session.user.id, "invoice.create", "Invoice", invoice.id, {
+    number,
+    totalCents,
+    kind: parsed.kind,
+  });
+
   revalidatePath("/finance/invoices");
   redirect(`/finance/invoices/${invoice.id}?ok=Invoice%20created`);
 }
 
 export async function sendInvoice(id: string) {
-  await requireCapability("finance.write");
+  const session = await requireCapability("finance.write");
   await prisma.invoice.update({
     where: { id },
     data: { status: InvoiceStatus.SENT },
   });
+  await logAudit(session.user.id, "invoice.send", "Invoice", id);
   revalidatePath("/finance/invoices");
   revalidatePath(`/finance/invoices/${id}`);
 }
 
 export async function voidInvoice(id: string) {
-  await requireCapability("finance.write");
+  const session = await requireCapability("finance.write");
   await prisma.invoice.update({
     where: { id },
     data: { status: InvoiceStatus.VOID },
   });
+  await logAudit(session.user.id, "invoice.void", "Invoice", id);
   revalidatePath("/finance/invoices");
   revalidatePath(`/finance/invoices/${id}`);
 }

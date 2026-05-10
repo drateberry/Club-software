@@ -1,0 +1,57 @@
+name: club-os CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - ".github/workflows/club-os-ci.yml"
+  pull_request:
+    paths:
+      - "app/**"
+      - ".github/workflows/club-os-ci.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    env:
+      DATABASE_URL: postgresql://club:club@localhost:5432/club?schema=public
+      AUTH_SECRET: ci-secret-32-bytes-of-pad-pad-pad
+      EMAIL_SERVER: smtp://localhost:1025
+      EMAIL_FROM: noreply@club.local
+      CLUB_NAME: Club OS CI
+      CLUB_LOCALE: en-US
+      CLUB_CURRENCY: USD
+      CLUB_TIMEZONE: America/New_York
+      CLUB_PUBLIC_URL: http://localhost:3000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Build
+        run: pnpm build

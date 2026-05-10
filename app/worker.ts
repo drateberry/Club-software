@@ -5,8 +5,34 @@ import {
   startOfMonth,
   startOfNextMonth,
 } from "./src/lib/houseAccounts";
+import { getEmailProvider, type EmailMessage } from "./src/lib/email";
+import { ensureInstallmentPaymentLink } from "./src/lib/payments/installments";
+import {
+  installmentReminderEmail,
+  complianceReminderEmail,
+} from "./src/lib/email/templates";
 
-async function runInstallmentReminders() {
+const CLUB_NAME = process.env.CLUB_NAME ?? "Club OS";
+const CLUB_LOCALE = process.env.CLUB_LOCALE ?? "en-US";
+const CLUB_CURRENCY = process.env.CLUB_CURRENCY ?? "USD";
+const PUBLIC_URL = process.env.CLUB_PUBLIC_URL ?? "http://localhost:3000";
+
+function fmtMoney(cents: number): string {
+  return new Intl.NumberFormat(CLUB_LOCALE, {
+    style: "currency",
+    currency: CLUB_CURRENCY,
+  }).format(cents / 100);
+}
+
+function fmtDate(d: Date): string {
+  return new Intl.DateTimeFormat(CLUB_LOCALE, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(d);
+}
+
+async function runInstallmentReminders(boss: Awaited<ReturnType<typeof getQueue>>) {
   const horizon = new Date();
   horizon.setDate(horizon.getDate() + 3);
   const due = await prisma.installment.findMany({
@@ -14,18 +40,36 @@ async function runInstallmentReminders() {
       status: { in: ["PENDING", "SENT"] },
       dueDate: { lte: horizon, gte: new Date() },
     },
-    include: { invoice: { include: { member: true } } },
+    include: { invoice: { include: { member: true, installments: true } } },
   });
+
   console.log(`[worker] installment.reminder: ${due.length} due in 3 days`);
-  // TODO Phase 5: enqueue email.send for each via the email provider.
   for (const inst of due) {
-    console.log(
-      `  - ${inst.invoice.number} #${inst.sequence} due ${inst.dueDate.toISOString().slice(0, 10)} for ${inst.invoice.member.email ?? inst.invoice.memberId}`
-    );
+    const member = inst.invoice.member;
+    if (!member.email) continue;
+
+    const link = await ensureInstallmentPaymentLink(inst.id);
+    const tpl = installmentReminderEmail({
+      memberName: `${member.firstName} ${member.lastName}`,
+      invoiceNumber: inst.invoice.number,
+      installmentSequence: inst.sequence,
+      installmentTotal: inst.invoice.installments.length,
+      amountFormatted: fmtMoney(inst.amountCents + inst.adminFeeCents),
+      dueDate: fmtDate(inst.dueDate),
+      paymentUrl: link.url,
+      clubName: CLUB_NAME,
+    });
+
+    await boss.send(QUEUES.emailSend, {
+      to: member.email,
+      subject: tpl.subject,
+      html: tpl.html,
+      text: tpl.text,
+    } satisfies EmailMessage);
   }
 }
 
-async function runComplianceReminders() {
+async function runComplianceReminders(boss: Awaited<ReturnType<typeof getQueue>>) {
   const horizon = new Date();
   horizon.setDate(horizon.getDate() + 30);
   const expiring = await prisma.complianceCertificate.findMany({
@@ -35,13 +79,22 @@ async function runComplianceReminders() {
     },
     include: { member: true },
   });
-  console.log(
-    `[worker] compliance.reminder: ${expiring.length} certificates expiring in 30 days`
-  );
-  for (const c of expiring) {
-    console.log(
-      `  - ${c.type} for ${c.member.firstName} ${c.member.lastName} expires ${c.expiresOn?.toISOString().slice(0, 10)}`
-    );
+
+  console.log(`[worker] compliance.reminder: ${expiring.length} expiring in 30 days`);
+  for (const cert of expiring) {
+    if (!cert.member.email || !cert.expiresOn) continue;
+    const tpl = complianceReminderEmail({
+      memberName: `${cert.member.firstName} ${cert.member.lastName}`,
+      certType: cert.type,
+      expiresOn: fmtDate(cert.expiresOn),
+      clubName: CLUB_NAME,
+    });
+    await boss.send(QUEUES.emailSend, {
+      to: cert.member.email,
+      subject: tpl.subject,
+      html: tpl.html,
+      text: tpl.text,
+    } satisfies EmailMessage);
   }
 }
 
@@ -59,19 +112,29 @@ async function main() {
   const boss = await getQueue();
   await Promise.all(Object.values(QUEUES).map((q) => boss.createQueue(q)));
 
+  const provider = getEmailProvider();
+  console.log(`[worker] email provider: ${provider.name}`);
+  console.log(`[worker] public url:     ${PUBLIC_URL}`);
+
   await boss.work(QUEUES.emailSend, async (jobs) => {
     for (const job of jobs) {
-      // TODO Phase 5: dispatch through email provider abstraction (SES first).
-      console.log("[worker] email.send (placeholder)", job.id, job.data);
+      const message = job.data as EmailMessage;
+      try {
+        const result = await provider.send(message);
+        console.log(`[worker] email sent ${result.id} -> ${message.to}`);
+      } catch (err) {
+        console.error("[worker] email send failed", err);
+        throw err;
+      }
     }
   });
 
   await boss.work(QUEUES.installmentReminder, async () => {
-    await runInstallmentReminders();
+    await runInstallmentReminders(boss);
   });
 
   await boss.work(QUEUES.complianceReminder, async () => {
-    await runComplianceReminders();
+    await runComplianceReminders(boss);
   });
 
   await boss.work(QUEUES.statementGenerate, async () => {
@@ -82,11 +145,11 @@ async function main() {
   await boss.schedule(QUEUES.complianceReminder, "0 9 * * *");
   await boss.schedule(QUEUES.statementGenerate, "0 6 1 * *");
 
-  console.log("[worker] started");
   console.log("[worker] schedules:");
   console.log("  - installment.reminder: daily 09:00");
   console.log("  - compliance.reminder:  daily 09:00");
   console.log("  - statement.generate:   1st of month, 06:00");
+  console.log("[worker] started, listening for jobs");
 
   process.on("SIGTERM", async () => {
     console.log("[worker] SIGTERM, stopping");

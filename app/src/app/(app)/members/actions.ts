@@ -6,6 +6,7 @@ import { z } from "zod";
 import { MembershipStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireCapability } from "@/lib/guards";
+import { logAudit } from "@/lib/audit";
 
 const memberSchema = z.object({
   firstName: z.string().min(1).max(100),
@@ -17,7 +18,7 @@ const memberSchema = z.object({
 });
 
 export async function createMember(formData: FormData) {
-  await requireCapability("members.write");
+  const session = await requireCapability("members.write");
   const parsed = memberSchema.parse({
     firstName: formData.get("firstName"),
     lastName: formData.get("lastName"),
@@ -37,13 +38,14 @@ export async function createMember(formData: FormData) {
       membershipClass: parsed.membershipClass || null,
     },
   });
+  await logAudit(session.user.id, "member.create", "Member", member.id, parsed);
 
   revalidatePath("/members");
   redirect(`/members/${member.id}?ok=Member%20created`);
 }
 
 export async function updateMember(id: string, formData: FormData) {
-  await requireCapability("members.write");
+  const session = await requireCapability("members.write");
   const parsed = memberSchema.parse({
     firstName: formData.get("firstName"),
     lastName: formData.get("lastName"),
@@ -64,6 +66,7 @@ export async function updateMember(id: string, formData: FormData) {
       membershipClass: parsed.membershipClass || null,
     },
   });
+  await logAudit(session.user.id, "member.update", "Member", id, parsed);
 
   revalidatePath("/members");
   revalidatePath(`/members/${id}`);
@@ -71,11 +74,12 @@ export async function updateMember(id: string, formData: FormData) {
 }
 
 export async function deleteMember(id: string) {
-  await requireCapability("members.write");
+  const session = await requireCapability("members.write");
   await prisma.member.update({
     where: { id },
     data: { deletedAt: new Date() },
   });
+  await logAudit(session.user.id, "member.delete", "Member", id);
   revalidatePath("/members");
   redirect("/members?ok=Member%20deleted");
 }
@@ -156,7 +160,7 @@ export async function bulkUpdateMembers(input: {
   ids: string[];
   action: "activate" | "suspend" | "delete";
 }) {
-  await requireCapability("members.write");
+  const session = await requireCapability("members.write");
   const parsed = bulkSchema.parse(input);
 
   if (parsed.action === "delete") {
@@ -175,5 +179,12 @@ export async function bulkUpdateMembers(input: {
       },
     });
   }
+  await logAudit(
+    session.user.id,
+    "member.bulkUpdate",
+    "Member",
+    parsed.ids.join(","),
+    { action: parsed.action, count: parsed.ids.length }
+  );
   revalidatePath("/members");
 }

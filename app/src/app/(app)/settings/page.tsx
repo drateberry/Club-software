@@ -1,55 +1,75 @@
-import { getTranslations } from "next-intl/server";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { requireCapability } from "@/lib/guards";
-
-const TABS = [
-  { href: "/settings", labelKey: "settings.tabs.branding" },
-  { href: "/settings/locale", labelKey: "settings.tabs.locale" },
-  { href: "/settings/payments", labelKey: "settings.tabs.payments" },
-  { href: "/settings/email", labelKey: "settings.tabs.email" },
-  { href: "/settings/house-accounts", labelKey: "settings.tabs.houseAccounts" },
-  { href: "/settings/compliance", labelKey: "settings.tabs.compliance" },
-  { href: "/settings/users", labelKey: "settings.tabs.users" },
-];
+import { SubmitButton } from "@/components/SubmitButton";
+import { SETTING_KEYS, getSettingMap } from "@/lib/settings";
+import { saveBranding } from "./actions";
+import { SettingsTabs } from "./tabs";
 
 export default async function SettingsPage() {
   await requireCapability("settings.write");
   const t = await getTranslations();
 
+  const values = await getSettingMap([
+    SETTING_KEYS.clubName,
+    SETTING_KEYS.logoUrl,
+    SETTING_KEYS.primaryColor,
+  ] as const);
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">{t("settings.title")}</h1>
-      <nav className="flex flex-wrap gap-2">
-        {TABS.map((tab) => (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            className="rounded border border-gray-300 bg-white px-3 py-2 text-sm hover:bg-gray-50"
-          >
-            {t(tab.labelKey)}
-          </Link>
-        ))}
-      </nav>
-      <div className="rounded-lg border border-gray-200 bg-white p-6">
-        <h2 className="text-sm font-semibold text-gray-700">
-          {t("settings.tabs.branding")}
-        </h2>
-        <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
-          <dt className="text-gray-500">{t("settings.branding.clubName")}</dt>
-          <dd>{process.env.CLUB_NAME ?? "Club OS"}</dd>
-          <dt className="text-gray-500">Locale</dt>
-          <dd>{process.env.CLUB_LOCALE ?? "en-US"}</dd>
-          <dt className="text-gray-500">Currency</dt>
-          <dd>{process.env.CLUB_CURRENCY ?? "USD"}</dd>
-          <dt className="text-gray-500">Timezone</dt>
-          <dd>{process.env.CLUB_TIMEZONE ?? "America/New_York"}</dd>
-        </dl>
-        <p className="mt-4 text-xs text-gray-500">
-          Editable settings UI lands in Phase 5. Values currently come from environment
-          variables; deeper config (Stripe keys, email provider, capabilities) will move
-          into the Setting table.
-        </p>
-      </div>
+      <SettingsTabs active="branding" />
+
+      <form
+        action={saveBranding}
+        className="max-w-xl space-y-4 rounded-lg border border-gray-200 bg-white p-4"
+      >
+        <h2 className="text-sm font-semibold text-gray-700">Branding</h2>
+        <label className="block text-sm">
+          <span className="font-medium">Club name</span>
+          <input
+            type="text"
+            name="clubName"
+            required
+            defaultValue={
+              (values[SETTING_KEYS.clubName] as string) ?? process.env.CLUB_NAME ?? ""
+            }
+            className="mt-1 block w-full rounded border border-gray-300 px-3 py-2"
+          />
+        </label>
+        <label className="block text-sm">
+          <span className="font-medium">Logo URL</span>
+          <input
+            type="url"
+            name="logoUrl"
+            defaultValue={(values[SETTING_KEYS.logoUrl] as string) ?? ""}
+            placeholder="https://…/logo.svg"
+            className="mt-1 block w-full rounded border border-gray-300 px-3 py-2"
+          />
+        </label>
+        <label className="block text-sm">
+          <span className="font-medium">Primary color (hex)</span>
+          <input
+            type="text"
+            name="primaryColor"
+            defaultValue={(values[SETTING_KEYS.primaryColor] as string) ?? ""}
+            placeholder="#0E7C66"
+            className="mt-1 block w-full rounded border border-gray-300 px-3 py-2"
+          />
+        </label>
+        <div className="flex justify-end">
+          <SubmitButton>Save</SubmitButton>
+        </div>
+      </form>
+
+      <p className="text-xs text-gray-500">
+        Other tabs:{" "}
+        <Link href="/settings/locale" className="underline">Locale</Link>{" "}·{" "}
+        <Link href="/settings/email" className="underline">Email</Link>{" "}·{" "}
+        <Link href="/settings/import" className="underline">Import members</Link>{" "}·{" "}
+        <Link href="/settings/audit" className="underline">Audit log</Link>
+      </p>
     </div>
   );
 }
