@@ -24,6 +24,7 @@ export const QUEUES = {
   statementGenerate: "statement.generate",
   complianceReminder: "compliance.reminder",
   emailSend: "email.send",
+  messagingSend: "messaging.send",
 } as const;
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];

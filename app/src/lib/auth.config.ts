@@ -13,7 +13,7 @@ export const authConfig = {
       const isLoggedIn = !!auth?.user;
       const { pathname } = request.nextUrl;
 
-      const publicPaths = ["/login", "/pay", "/checkin", "/api/webhooks"];
+      const publicPaths = ["/login", "/pay", "/checkin", "/api/webhooks", "/api/mcp", "/.well-known"];
       const isPublic = publicPaths.some((p) => pathname.startsWith(p));
       if (isPublic) return true;
 

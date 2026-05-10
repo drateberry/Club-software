@@ -8,9 +8,14 @@ export const SETTING_KEYS = {
   currency: "locale.currency",
   timezone: "locale.timezone",
   emailFrom: "email.from",
+  twilioAccountSid: "twilio.accountSid",
+  twilioAuthToken: "twilio.authToken",
+  twilioFromNumber: "twilio.fromNumber",
+  messagingHelpText: "messaging.helpText",
+  messagingTriggers: "messaging.triggers",
 } as const;
 
-export type SettingKey = (typeof SETTING_KEYS)[keyof typeof SETTING_KEYS];
+export type SettingKey = (typeof SETTING_KEYS)[keyof typeof SETTING_KEYS] | (string & {});
 
 export async function getSetting<T = string>(
   key: SettingKey,

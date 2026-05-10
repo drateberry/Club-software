@@ -44,6 +44,7 @@ model User {
   createdTasks       Task[]        @relation("TaskCreatedBy")
   assignedTasks      Task[]        @relation("TaskAssignedTo")
   auditEvents        AuditEvent[]
+  sentMessages       Message[]     @relation("MessageSentBy")
 }
 
 model Account {
@@ -139,6 +140,9 @@ model Member {
   feedback              Feedback[]
   linkedTasks           Task[]
   checkinLogs           CheckinLog[]
+  conversations         Conversation[]
+
+  twilioOptedOut Boolean @default(false)
 
   @@index([lastName, firstName])
   @@index([membershipStatus])
@@ -612,4 +616,64 @@ model AuditEvent {
 
   @@index([entity, entityId])
   @@index([actorId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Twilio messaging
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum MessageDirection {
+  OUTBOUND
+  INBOUND
+}
+
+enum MessageStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  RECEIVED
+}
+
+model Conversation {
+  id            String   @id @default(cuid())
+  memberId      String?
+  phone         String   @unique
+  lastMessageAt DateTime @default(now())
+  unread        Boolean  @default(false)
+  optedOut     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  member   Member?   @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  messages Message[]
+
+  @@index([memberId, lastMessageAt])
+  @@index([lastMessageAt])
+}
+
+model Message {
+  id             String           @id @default(cuid())
+  conversationId String
+  direction      MessageDirection
+  body           String?
+  mediaUrls      Json             @default("[]")
+  status         MessageStatus
+  twilioSid      String?          @unique
+  errorCode      String?
+  errorMessage   String?
+  sentById       String?
+  createdAt      DateTime         @default(now())
+  deliveredAt    DateTime?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sentBy       User?        @relation("MessageSentBy", fields: [sentById], references: [id], onDelete: SetNull)
+
+  @@index([conversationId, createdAt])
+  @@index([twilioSid])
+}
+
+model OutboundOptOut {
+  phone     String   @id
+  reason    String?
+  createdAt DateTime @default(now())
 }

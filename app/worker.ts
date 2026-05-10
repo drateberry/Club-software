@@ -11,6 +11,12 @@ import {
   installmentReminderEmail,
   complianceReminderEmail,
 } from "./src/lib/email/templates";
+import {
+  sendMessage,
+  OptedOutError,
+  TwilioNotConfiguredError,
+  type SendArgs,
+} from "./src/lib/twilio/send";
 
 const CLUB_NAME = process.env.CLUB_NAME ?? "Club OS";
 const CLUB_LOCALE = process.env.CLUB_LOCALE ?? "en-US";
@@ -124,6 +130,27 @@ async function main() {
         console.log(`[worker] email sent ${result.id} -> ${message.to}`);
       } catch (err) {
         console.error("[worker] email send failed", err);
+        throw err;
+      }
+    }
+  });
+
+  await boss.work(QUEUES.messagingSend, async (jobs) => {
+    for (const job of jobs) {
+      const args = job.data as SendArgs;
+      try {
+        const result = await sendMessage(args);
+        console.log(`[worker] sms sent ${result.twilioSid} -> ${args.toPhone}`);
+      } catch (err) {
+        if (err instanceof OptedOutError) {
+          console.warn(`[worker] sms skipped (opted out): ${args.toPhone}`);
+          continue;
+        }
+        if (err instanceof TwilioNotConfiguredError) {
+          console.warn("[worker] sms skipped: twilio not configured");
+          continue;
+        }
+        console.error("[worker] sms send failed", err);
         throw err;
       }
     }

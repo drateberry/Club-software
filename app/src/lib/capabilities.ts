@@ -14,7 +14,11 @@ export type Capability =
   | "compliance.read"
   | "compliance.write"
   | "checkin.scan"
-  | "settings.write";
+  | "settings.write"
+  | "messaging.read"
+  | "messaging.write"
+  | "messaging.bulkSend"
+  | "payments.chargeOnFile";
 
 const ADMIN_IMPLIED: Capability[] = [
   "members.read",
@@ -33,6 +37,10 @@ const ADMIN_IMPLIED: Capability[] = [
   "compliance.write",
   "checkin.scan",
   "settings.write",
+  "messaging.read",
+  "messaging.write",
+  "messaging.bulkSend",
+  "payments.chargeOnFile",
 ];
 
 const STAFF_IMPLIED: Capability[] = [
@@ -47,6 +55,8 @@ const STAFF_IMPLIED: Capability[] = [
   "houseAccounts.read",
   "houseAccounts.write",
   "checkin.scan",
+  "messaging.read",
+  "messaging.write",
 ];
 
 const MEMBER_IMPLIED: Capability[] = [

@@ -11,6 +11,8 @@ import { ConfirmButton } from "@/components/ConfirmButton";
 import { updateMember, deleteMember } from "../actions";
 import { AddressEditor } from "./AddressEditor";
 import { generateMemberPass } from "@/app/(app)/checkin/actions";
+import { sendToMember, reOptIn } from "@/app/(app)/messages/actions";
+import { formatHuman } from "@/lib/twilio/normalize";
 
 export default async function MemberDetailPage({
   params,
@@ -34,6 +36,11 @@ export default async function MemberDetailPage({
         orderBy: { createdAt: "desc" },
         take: 5,
       },
+      conversations: {
+        select: { id: true, lastMessageAt: true, _count: { select: { messages: true } } },
+        orderBy: { lastMessageAt: "desc" },
+        take: 1,
+      },
     },
   });
   if (!member || member.deletedAt) notFound();
@@ -46,6 +53,13 @@ export default async function MemberDetailPage({
 
   const updateThis = updateMember.bind(null, id);
   const deleteThis = deleteMember.bind(null, id);
+  const reOptInThis = reOptIn.bind(null, id);
+  const canMessage = hasCapability(
+    session.user.role,
+    (session.user.capabilities ?? []) as Capability[],
+    "messaging.write"
+  );
+  const conversation = member.conversations[0];
 
   return (
     <div className="space-y-6">
@@ -194,6 +208,50 @@ export default async function MemberDetailPage({
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {canMessage && member.phone && (
+        <section className="rounded-lg border border-gray-200 bg-white p-4">
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="text-sm font-semibold text-gray-700">Send SMS</h2>
+            <span className="text-xs text-gray-500">{formatHuman(member.phone)}</span>
+          </div>
+          {member.twilioOptedOut ? (
+            <div className="space-y-2 text-sm">
+              <p className="rounded border border-red-200 bg-red-50 p-2 text-red-900">
+                This member has opted out of texts. They must reply START, or
+                you can record their re-consent below.
+              </p>
+              <form action={reOptInThis}>
+                <SubmitButton variant="secondary" pendingLabel="Updating…">
+                  Record re-opt-in
+                </SubmitButton>
+              </form>
+            </div>
+          ) : (
+            <form action={sendToMember} className="space-y-2">
+              <input type="hidden" name="memberId" value={member.id} />
+              <textarea
+                name="body"
+                required
+                rows={3}
+                placeholder="Type a text message…"
+                className="block w-full resize-none rounded border border-gray-300 px-3 py-2 text-sm"
+              />
+              <div className="flex items-center justify-between">
+                {conversation && (
+                  <Link
+                    href={`/messages/${conversation.id}`}
+                    className="text-xs text-gray-500 hover:underline"
+                  >
+                    Open thread ({conversation._count.messages} messages) →
+                  </Link>
+                )}
+                <SubmitButton pendingLabel="Sending…">Send SMS</SubmitButton>
+              </div>
+            </form>
+          )}
         </section>
       )}
 

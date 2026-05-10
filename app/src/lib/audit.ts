@@ -18,7 +18,15 @@ export type AuditAction =
   | "event.create"
   | "pass.issue"
   | "checkin.log"
-  | "settings.update";
+  | "settings.update"
+  | "message.send"
+  | "message.bulkSend"
+  | "message.optOut"
+  | "message.optIn"
+  | "payment.chargeOnFile"
+  | "payment.method.add"
+  | "payment.method.remove"
+  | (string & { __mcp?: true });
 
 export type AuditEntity =
   | "Member"
@@ -29,7 +37,12 @@ export type AuditEntity =
   | "Event"
   | "User"
   | "CheckinLog"
-  | "Setting";
+  | "Setting"
+  | "Conversation"
+  | "Message"
+  | "PaymentMethod"
+  | "MCPClient"
+  | "MCPToken";
 
 export async function logAudit(
   actorId: string | null | undefined,

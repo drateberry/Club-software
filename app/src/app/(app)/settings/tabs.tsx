@@ -4,6 +4,7 @@ const TABS = [
   { id: "branding", label: "Branding", href: "/settings" },
   { id: "locale", label: "Locale", href: "/settings/locale" },
   { id: "email", label: "Email", href: "/settings/email" },
+  { id: "messaging", label: "Messaging", href: "/settings/messaging" },
   { id: "import", label: "Import", href: "/settings/import" },
   { id: "audit", label: "Audit log", href: "/settings/audit" },
 ] as const;
