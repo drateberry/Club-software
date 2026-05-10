@@ -43,11 +43,9 @@ export default async function MembersPage({
     prisma.member.count({ where }),
   ]);
 
-  const canWrite = hasCapability(
-    session.user.role,
-    (session.user.capabilities ?? []) as Capability[],
-    "members.write"
-  );
+  const caps = (session.user.capabilities ?? []) as Capability[];
+  const canWrite = hasCapability(session.user.role, caps, "members.write");
+  const canBulkSendSms = hasCapability(session.user.role, caps, "messaging.bulkSend");
 
   const rows = members.map((m) => ({
     id: m.id,
@@ -92,7 +90,7 @@ export default async function MembersPage({
           cta={canWrite ? { href: "/members/new", label: t("members.newMember") } : undefined}
         />
       ) : (
-        <MembersTable rows={rows} canWrite={canWrite} />
+        <MembersTable rows={rows} canWrite={canWrite} canBulkSendSms={canBulkSendSms} />
       )}
 
       <div className="flex items-center justify-between text-sm text-gray-600">

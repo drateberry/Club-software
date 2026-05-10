@@ -7,6 +7,7 @@ import { MembershipStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireCapability } from "@/lib/guards";
 import { logAudit } from "@/lib/audit";
+import { bulkSendToMembers } from "@/lib/twilio/bulk";
 
 const memberSchema = z.object({
   firstName: z.string().min(1).max(100),
@@ -187,4 +188,32 @@ export async function bulkUpdateMembers(input: {
     { action: parsed.action, count: parsed.ids.length }
   );
   revalidatePath("/members");
+}
+
+const bulkSmsSchema = z.object({
+  ids: z.array(z.string().cuid()).min(1).max(500),
+  body: z.string().min(1).max(1600),
+});
+
+export async function bulkSendSmsToMembers(input: { ids: string[]; body: string }) {
+  const session = await requireCapability("messaging.bulkSend");
+  const parsed = bulkSmsSchema.parse(input);
+
+  const result = await bulkSendToMembers({
+    memberIds: parsed.ids,
+    body: parsed.body,
+    sentById: session.user.id,
+  });
+
+  await logAudit(
+    session.user.id,
+    "message.bulkSend",
+    "Member",
+    parsed.ids.join(","),
+    { ...result, bodyLength: parsed.body.length }
+  );
+
+  revalidatePath("/members");
+  revalidatePath("/messages");
+  return result;
 }

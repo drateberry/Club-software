@@ -7,6 +7,8 @@ import { InvoiceKind, InvoiceStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireCapability } from "@/lib/guards";
 import { logAudit } from "@/lib/audit";
+import { enqueueTriggered } from "@/lib/twilio/triggers";
+import { formatMoney } from "@/lib/format";
 
 const lineSchema = z.object({
   description: z.string().min(1).max(500),
@@ -91,11 +93,22 @@ export async function createInvoice(formData: FormData) {
 
 export async function sendInvoice(id: string) {
   const session = await requireCapability("finance.write");
-  await prisma.invoice.update({
+  const invoice = await prisma.invoice.update({
     where: { id },
     data: { status: InvoiceStatus.SENT },
   });
   await logAudit(session.user.id, "invoice.send", "Invoice", id);
+
+  const baseUrl = process.env.CLUB_PUBLIC_URL ?? "http://localhost:3000";
+  await enqueueTriggered("invoice.sent", {
+    memberId: invoice.memberId,
+    vars: {
+      invoice_number: invoice.number,
+      amount: formatMoney(invoice.totalCents, invoice.currency),
+      payment_url: `${baseUrl}/pay/${invoice.paymentToken}`,
+    },
+  });
+
   revalidatePath("/finance/invoices");
   revalidatePath(`/finance/invoices/${id}`);
 }

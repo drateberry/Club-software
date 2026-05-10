@@ -7,6 +7,8 @@ import { AttendanceStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireSession, requireCapability } from "@/lib/guards";
 import { getPaymentProvider } from "@/lib/payments";
+import { enqueueTriggered } from "@/lib/twilio/triggers";
+import { formatDate } from "@/lib/format";
 
 const eventSchema = z.object({
   title: z.string().min(1).max(200),
@@ -112,6 +114,19 @@ export async function rsvp(eventId: string, formData: FormData) {
       update: { status },
     });
   });
+
+  if (status === AttendanceStatus.GOING) {
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    if (event) {
+      await enqueueTriggered("rsvp.confirmed", {
+        memberId,
+        vars: {
+          event_title: event.title,
+          event_date: formatDate(event.startAt),
+        },
+      });
+    }
+  }
 
   revalidatePath(`/events/${eventId}`);
   redirect(`/events/${eventId}?ok=RSVP%20saved`);

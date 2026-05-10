@@ -1,5 +1,7 @@
 import { InvoiceKind, InvoiceStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { enqueueTriggered } from "@/lib/twilio/triggers";
+import { formatMoney } from "@/lib/format";
 
 export const HOUSE_ACCOUNT_CATEGORIES = [
   "Dining",
@@ -99,6 +101,22 @@ export async function generateStatements(
         data: { invoiceId: invoice.id },
       });
     });
+
+    const created_invoice = await prisma.invoice.findFirst({
+      where: { number, memberId },
+      select: { number: true, totalCents: true, currency: true, paymentToken: true },
+    });
+    if (created_invoice) {
+      const baseUrl = process.env.CLUB_PUBLIC_URL ?? "http://localhost:3000";
+      await enqueueTriggered("statement.generated", {
+        memberId,
+        vars: {
+          invoice_number: created_invoice.number,
+          amount: formatMoney(created_invoice.totalCents, created_invoice.currency),
+          payment_url: `${baseUrl}/pay/${created_invoice.paymentToken}`,
+        },
+      });
+    }
 
     created += 1;
   }

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { MembershipStatus } from "@prisma/client";
-import { bulkUpdateMembers, updateMemberField } from "./actions";
+import { bulkSendSmsToMembers, bulkUpdateMembers, updateMemberField } from "./actions";
 
 type Row = {
   id: string;
@@ -26,9 +26,11 @@ const STATUSES: MembershipStatus[] = ["ACTIVE", "SUSPENDED", "RESIGNED", "DECEAS
 export function MembersTable({
   rows: initialRows,
   canWrite,
+  canBulkSendSms,
 }: {
   rows: Row[];
   canWrite: boolean;
+  canBulkSendSms: boolean;
 }) {
   const t = useTranslations();
   const router = useRouter();
@@ -36,6 +38,9 @@ export function MembersTable({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<EditingCell>(null);
   const [pending, startTransition] = useTransition();
+  const [composing, setComposing] = useState(false);
+  const [smsBody, setSmsBody] = useState("");
+  const [smsResult, setSmsResult] = useState<string | null>(null);
 
   const allSelected = useMemo(
     () => rows.length > 0 && rows.every((r) => selected.has(r.id)),
@@ -90,6 +95,23 @@ export function MembersTable({
     });
   };
 
+  const sendBulkSms = () => {
+    const body = smsBody.trim();
+    if (!body || selected.size === 0) return;
+    const ids = Array.from(selected);
+    startTransition(async () => {
+      const result = await bulkSendSmsToMembers({ ids, body });
+      setSmsResult(
+        `Queued ${result.enqueued} of ${result.total}` +
+          (result.skippedNoPhone ? ` · ${result.skippedNoPhone} no phone` : "") +
+          (result.skippedOptedOut ? ` · ${result.skippedOptedOut} opted out` : "")
+      );
+      setSmsBody("");
+      setComposing(false);
+      router.refresh();
+    });
+  };
+
   const editableField = (
     row: Row,
     field: "memberNumber" | "email" | "phone" | "membershipClass"
@@ -127,44 +149,105 @@ export function MembersTable({
 
   return (
     <div className="space-y-3">
+      {smsResult && (
+        <div className="rounded border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-900">
+          {smsResult}
+          <button
+            type="button"
+            onClick={() => setSmsResult(null)}
+            className="ml-3 text-xs underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {selected.size > 0 && canWrite && (
-        <div className="flex items-center justify-between rounded border border-gray-300 bg-white px-3 py-2 text-sm">
-          <span className="text-gray-700">
-            {selected.size} selected
-          </span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => runBulk("activate")}
-              disabled={pending}
-              className="rounded border border-gray-300 px-3 py-1"
-            >
-              Activate
-            </button>
-            <button
-              type="button"
-              onClick={() => runBulk("suspend")}
-              disabled={pending}
-              className="rounded border border-gray-300 px-3 py-1"
-            >
-              Suspend
-            </button>
-            <button
-              type="button"
-              onClick={() => runBulk("delete")}
-              disabled={pending}
-              className="rounded border border-red-300 px-3 py-1 text-red-700"
-            >
-              Delete
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelected(new Set())}
-              className="rounded px-3 py-1 text-gray-500"
-            >
-              Clear
-            </button>
+        <div className="space-y-2 rounded border border-gray-300 bg-white px-3 py-2 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-gray-700">{selected.size} selected</span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => runBulk("activate")}
+                disabled={pending}
+                className="rounded border border-gray-300 px-3 py-1"
+              >
+                Activate
+              </button>
+              <button
+                type="button"
+                onClick={() => runBulk("suspend")}
+                disabled={pending}
+                className="rounded border border-gray-300 px-3 py-1"
+              >
+                Suspend
+              </button>
+              {canBulkSendSms && (
+                <button
+                  type="button"
+                  onClick={() => setComposing((v) => !v)}
+                  disabled={pending}
+                  className="rounded border border-gray-300 px-3 py-1"
+                >
+                  Send SMS
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => runBulk("delete")}
+                disabled={pending}
+                className="rounded border border-red-300 px-3 py-1 text-red-700"
+              >
+                Delete
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelected(new Set())}
+                className="rounded px-3 py-1 text-gray-500"
+              >
+                Clear
+              </button>
+            </div>
           </div>
+
+          {composing && canBulkSendSms && (
+            <div className="space-y-2 rounded border border-gray-200 bg-gray-50 p-3">
+              <textarea
+                rows={3}
+                value={smsBody}
+                onChange={(e) => setSmsBody(e.target.value)}
+                placeholder={`Type a message to ${selected.size} member${selected.size === 1 ? "" : "s"}…`}
+                className="block w-full resize-none rounded border border-gray-300 px-3 py-2 text-sm"
+              />
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500">
+                  {smsBody.length}/1600 chars
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setComposing(false);
+                      setSmsBody("");
+                    }}
+                    disabled={pending}
+                    className="rounded border border-gray-300 px-3 py-1"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={sendBulkSms}
+                    disabled={pending || !smsBody.trim()}
+                    className="rounded bg-black px-3 py-1 font-medium text-white disabled:opacity-50"
+                  >
+                    {pending ? "Queuing…" : `Send to ${selected.size}`}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
