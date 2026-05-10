@@ -30,6 +30,15 @@ export type WebhookMatch =
       expYear: number | null;
       paymentMethodKind: "CARD" | "ACH";
     }
+  | {
+      kind: "payment_method_attached";
+      customerId: string;
+      paymentMethodId: string;
+    }
+  | {
+      kind: "payment_method_detached";
+      paymentMethodId: string;
+    }
   | { kind: "ignored" };
 
 export type ProcessedWebhook = {

@@ -1,8 +1,23 @@
 import { NextResponse } from "next/server";
+import Stripe from "stripe";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getPaymentProvider } from "@/lib/payments";
 import { markInstallmentPaid, markInvoicePaid } from "@/lib/payments/installments";
+import {
+  syncAttachedPaymentMethod,
+  syncDetachedPaymentMethod,
+} from "@/lib/payments/portal";
+
+let stripeClient: Stripe | null = null;
+function client(): Stripe {
+  if (!stripeClient) {
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key) throw new Error("STRIPE_SECRET_KEY is not set");
+    stripeClient = new Stripe(key);
+  }
+  return stripeClient;
+}
 
 export const runtime = "nodejs";
 
@@ -86,6 +101,14 @@ export async function POST(req: Request) {
         expYear: m.expYear,
       },
     });
+  } else if (processed.match.kind === "payment_method_attached") {
+    const pm = await client().paymentMethods.retrieve(processed.match.paymentMethodId);
+    await syncAttachedPaymentMethod({
+      customerId: processed.match.customerId,
+      paymentMethod: pm,
+    });
+  } else if (processed.match.kind === "payment_method_detached") {
+    await syncDetachedPaymentMethod(processed.match.paymentMethodId);
   }
 
   await prisma.webhookEvent.update({

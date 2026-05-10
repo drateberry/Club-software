@@ -6,7 +6,11 @@ import { ConfirmButton } from "@/components/ConfirmButton";
 import { SubmitButton } from "@/components/SubmitButton";
 import { formatDate } from "@/lib/format";
 import { AddCardForm } from "./AddCardForm";
-import { deletePaymentMethod, setDefaultPaymentMethod } from "./actions";
+import {
+  deletePaymentMethod,
+  setDefaultPaymentMethod,
+  openCustomerPortal,
+} from "./actions";
 
 export default async function PaymentMethodsPage({
   params,
@@ -81,12 +85,29 @@ export default async function PaymentMethodsPage({
         )}
       </section>
 
-      <section>
+      <section className="space-y-3">
         <AddCardForm memberId={member.id} />
-        <p className="mt-2 text-xs text-gray-500">
+        <p className="text-xs text-gray-500">
           Card details are entered into Stripe&apos;s embedded form and never touch
           our servers. We store only the brand, last 4 digits, and expiry.
         </p>
+      </section>
+
+      <section className="rounded-lg border border-gray-200 bg-white p-4">
+        <h2 className="mb-2 text-sm font-semibold text-gray-700">
+          Self-serve in Stripe&apos;s Customer Portal
+        </h2>
+        <p className="mb-3 text-xs text-gray-500">
+          Opens Stripe&apos;s hosted portal in a new session where the member
+          can add or remove cards, see receipts, and update their billing
+          info. Changes sync back here automatically. (Configure allowed
+          features in <em>Stripe → Settings → Billing → Customer portal</em>.)
+        </p>
+        <form action={openCustomerPortal.bind(null, member.id)}>
+          <SubmitButton variant="secondary" pendingLabel="Opening…">
+            Open in Stripe Customer Portal
+          </SubmitButton>
+        </form>
       </section>
     </div>
   );

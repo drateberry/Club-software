@@ -75,6 +75,27 @@ export const StripeProvider: PaymentProvider = {
       raw,
     });
 
+    if (event.type === "payment_method.attached") {
+      const pm = event.data.object as Stripe.PaymentMethod;
+      const customerId = typeof pm.customer === "string" ? pm.customer : pm.customer?.id;
+      if (!customerId) return ignored();
+      const match: WebhookMatch = {
+        kind: "payment_method_attached",
+        customerId,
+        paymentMethodId: pm.id,
+      };
+      return { providerEventId: event.id, match, raw };
+    }
+
+    if (event.type === "payment_method.detached") {
+      const pm = event.data.object as Stripe.PaymentMethod;
+      const match: WebhookMatch = {
+        kind: "payment_method_detached",
+        paymentMethodId: pm.id,
+      };
+      return { providerEventId: event.id, match, raw };
+    }
+
     if (event.type === "setup_intent.succeeded") {
       const setupIntent = event.data.object as Stripe.SetupIntent;
       const memberId = (setupIntent.metadata ?? {}).memberId;

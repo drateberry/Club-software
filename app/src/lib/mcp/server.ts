@@ -4,6 +4,13 @@ import { allTools, findTool } from "./registry";
 import { hasScope } from "./auth";
 import type { ToolContext, ToolResult } from "./types";
 import { logAudit } from "@/lib/audit";
+import {
+  staticResources,
+  resourceTemplates,
+  findResource,
+  findTemplateMatch,
+} from "./resources/registry";
+import { allPrompts, findPrompt } from "./prompts/registry";
 
 export type JsonRpcRequest = {
   jsonrpc: "2.0";
@@ -89,7 +96,11 @@ export async function handleRequest(
           id,
           result: {
             protocolVersion: PROTOCOL_VERSION,
-            capabilities: { tools: { listChanged: false } },
+            capabilities: {
+              tools: { listChanged: false },
+              resources: { listChanged: false, subscribe: false },
+              prompts: { listChanged: false },
+            },
             serverInfo: SERVER_INFO,
           },
         };
@@ -154,6 +165,134 @@ export async function handleRequest(
         });
 
         return { jsonrpc: "2.0", id, result };
+      }
+
+      case "resources/list": {
+        const allowed = staticResources.filter((r) =>
+          r.required.every((cap) => ctx.scopes.includes(cap))
+        );
+        return {
+          jsonrpc: "2.0",
+          id,
+          result: {
+            resources: allowed.map((r) => ({
+              uri: r.uri,
+              name: r.name,
+              description: r.description,
+              mimeType: r.mimeType,
+            })),
+          },
+        };
+      }
+
+      case "resources/templates/list": {
+        const allowed = resourceTemplates.filter((r) =>
+          r.required.every((cap) => ctx.scopes.includes(cap))
+        );
+        return {
+          jsonrpc: "2.0",
+          id,
+          result: {
+            resourceTemplates: allowed.map((r) => ({
+              uriTemplate: r.uriTemplate,
+              name: r.name,
+              description: r.description,
+              mimeType: r.mimeType,
+            })),
+          },
+        };
+      }
+
+      case "resources/read": {
+        const { uri } = (request.params ?? {}) as { uri?: string };
+        if (!uri) return errorResp(id, -32602, "Missing uri");
+
+        const exact = findResource(uri);
+        if (exact) {
+          if (!hasScope(ctx, exact.required)) {
+            return errorResp(id, -32603, "Forbidden");
+          }
+          const content = await exact.read(ctx);
+          await logAudit(ctx.user.id, `mcp.resource.read`, "User", ctx.user.id, { uri });
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              contents: [{ uri, mimeType: content.mimeType, text: content.text }],
+            },
+          };
+        }
+
+        const match = findTemplateMatch(uri);
+        if (match) {
+          if (!hasScope(ctx, match.template.required)) {
+            return errorResp(id, -32603, "Forbidden");
+          }
+          const content = await match.template.read(match.params, ctx);
+          await logAudit(ctx.user.id, `mcp.resource.read`, "User", ctx.user.id, { uri });
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              contents: [{ uri, mimeType: content.mimeType, text: content.text }],
+            },
+          };
+        }
+
+        return errorResp(id, -32601, `Resource not found: ${uri}`);
+      }
+
+      case "resources/subscribe":
+      case "resources/unsubscribe":
+        // Subscriptions are advertised but not yet implemented; the client
+        // can poll resources/read instead. Returning OK avoids breaking
+        // clients that send these proactively.
+        return { jsonrpc: "2.0", id, result: {} };
+
+      case "prompts/list": {
+        const allowed = allPrompts.filter((p) =>
+          p.required.every((cap) => ctx.scopes.includes(cap))
+        );
+        return {
+          jsonrpc: "2.0",
+          id,
+          result: {
+            prompts: allowed.map((p) => ({
+              name: p.name,
+              title: p.title,
+              description: p.description,
+              arguments: p.arguments ?? [],
+            })),
+          },
+        };
+      }
+
+      case "prompts/get": {
+        const { name, arguments: args = {} } = (request.params ?? {}) as {
+          name?: string;
+          arguments?: Record<string, string>;
+        };
+        if (!name) return errorResp(id, -32602, "Missing prompt name");
+        const prompt = findPrompt(name);
+        if (!prompt) return errorResp(id, -32601, `Prompt not found: ${name}`);
+        if (!hasScope(ctx, prompt.required)) {
+          return errorResp(id, -32603, "Forbidden");
+        }
+        for (const arg of prompt.arguments ?? []) {
+          if (arg.required && !args[arg.name]) {
+            return errorResp(id, -32602, `Missing required argument: ${arg.name}`);
+          }
+        }
+        const built = await prompt.build(args, ctx);
+        await logAudit(ctx.user.id, `mcp.prompt.${name}`, "User", ctx.user.id, {});
+        return {
+          jsonrpc: "2.0",
+          id,
+          result: {
+            description: built.description ?? prompt.description,
+            messages: built.messages,
+          },
+        };
       }
 
       default:
