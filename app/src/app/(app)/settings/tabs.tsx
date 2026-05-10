@@ -5,6 +5,7 @@ const TABS = [
   { id: "locale", label: "Locale", href: "/settings/locale" },
   { id: "email", label: "Email", href: "/settings/email" },
   { id: "messaging", label: "Messaging", href: "/settings/messaging" },
+  { id: "connections", label: "AI connections", href: "/settings/connections" },
   { id: "import", label: "Import", href: "/settings/import" },
   { id: "audit", label: "Audit log", href: "/settings/audit" },
 ] as const;
