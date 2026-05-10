@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
@@ -9,6 +10,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { updateMember, deleteMember } from "../actions";
 import { AddressEditor } from "./AddressEditor";
+import { generateMemberPass } from "@/app/(app)/checkin/actions";
 
 export default async function MemberDetailPage({
   params,
@@ -22,6 +24,7 @@ export default async function MemberDetailPage({
   const member = await prisma.member.findUnique({
     where: { id },
     include: {
+      user: { select: { passToken: true } },
       addresses: { orderBy: { isPrimary: "desc" } },
       dependents: true,
       groupMemberships: { include: { group: true } },
@@ -193,6 +196,43 @@ export default async function MemberDetailPage({
           </ul>
         </section>
       )}
+
+      <section className="rounded-lg border border-gray-200 bg-white p-4">
+        <h2 className="mb-3 text-sm font-semibold text-gray-700">Member pass</h2>
+        {member.user?.passToken ? (
+          <div className="flex items-start gap-4">
+            <Image
+              src={`/api/pass/${member.user.passToken}`}
+              alt="Member pass QR code"
+              width={160}
+              height={160}
+              unoptimized
+              className="rounded border border-gray-200"
+            />
+            <div className="flex-1 text-sm text-gray-600">
+              <p>Scan to check in. The QR encodes the member&apos;s personal pass URL.</p>
+              {canWrite && (
+                <form
+                  action={generateMemberPass.bind(null, member.id)}
+                  className="mt-3"
+                >
+                  <SubmitButton variant="secondary">Re-issue pass</SubmitButton>
+                </form>
+              )}
+            </div>
+          </div>
+        ) : canWrite ? (
+          <form action={generateMemberPass.bind(null, member.id)}>
+            <SubmitButton>Issue pass</SubmitButton>
+            <p className="mt-2 text-xs text-gray-500">
+              Creates a user account linked to this member (if missing) and
+              generates a stable QR pass.
+            </p>
+          </form>
+        ) : (
+          <p className="text-sm text-gray-500">No pass issued.</p>
+        )}
+      </section>
 
       {canWrite && (
         <form action={deleteThis} className="pt-4">
