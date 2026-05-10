@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { CommandMenu } from "@/components/CommandMenu";
 import { FeedbackButton } from "@/components/FeedbackButton";
+import { Toaster } from "@/components/Toaster";
 import { requireSession } from "@/lib/guards";
 import { effectiveCapabilities, type Capability } from "@/lib/capabilities";
 
@@ -28,6 +30,9 @@ export default async function AppLayout({
       </div>
       <CommandMenu />
       <FeedbackButton />
+      <Suspense fallback={null}>
+        <Toaster />
+      </Suspense>
     </div>
   );
 }

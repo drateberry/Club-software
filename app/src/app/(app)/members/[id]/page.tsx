@@ -5,7 +5,10 @@ import { prisma } from "@/lib/db";
 import { requireCapability } from "@/lib/guards";
 import { hasCapability, type Capability } from "@/lib/capabilities";
 import { formatDate, formatMoney } from "@/lib/format";
+import { SubmitButton } from "@/components/SubmitButton";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { updateMember, deleteMember } from "../actions";
+import { AddressEditor } from "./AddressEditor";
 
 export default async function MemberDetailPage({
   params,
@@ -19,7 +22,7 @@ export default async function MemberDetailPage({
   const member = await prisma.member.findUnique({
     where: { id },
     include: {
-      addresses: true,
+      addresses: { orderBy: { isPrimary: "desc" } },
       dependents: true,
       groupMemberships: { include: { group: true } },
       committeeMemberships: { include: { committee: true } },
@@ -122,33 +125,16 @@ export default async function MemberDetailPage({
         </div>
         {canWrite && (
           <div className="flex justify-end gap-2">
-            <button
-              type="submit"
-              className="rounded bg-black px-4 py-2 text-sm font-medium text-white"
-            >
-              {t("members.saveChanges")}
-            </button>
+            <SubmitButton>{t("members.saveChanges")}</SubmitButton>
           </div>
         )}
       </form>
 
-      <section className="rounded-lg border border-gray-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-gray-700">
-          {t("members.addresses")}
-        </h2>
-        {member.addresses.length === 0 ? (
-          <p className="text-sm text-gray-500">—</p>
-        ) : (
-          <ul className="space-y-1 text-sm">
-            {member.addresses.map((a) => (
-              <li key={a.id}>
-                {a.street1}
-                {a.street2 ? `, ${a.street2}` : ""}, {a.city}, {a.state} {a.zip}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <AddressEditor
+        memberId={member.id}
+        addresses={member.addresses}
+        canWrite={canWrite}
+      />
 
       <section className="rounded-lg border border-gray-200 bg-white p-4">
         <h2 className="mb-3 text-sm font-semibold text-gray-700">
@@ -210,12 +196,13 @@ export default async function MemberDetailPage({
 
       {canWrite && (
         <form action={deleteThis} className="pt-4">
-          <button
-            type="submit"
-            className="text-sm text-red-600 hover:underline"
+          <ConfirmButton
+            message={t("members.confirmDelete")}
+            confirmLabel={t("members.delete")}
+            pendingLabel="Deleting…"
           >
             {t("members.delete")}
-          </button>
+          </ConfirmButton>
         </form>
       )}
     </div>

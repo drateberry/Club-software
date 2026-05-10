@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireCapability } from "@/lib/guards";
 import { hasCapability, type Capability } from "@/lib/capabilities";
 import { formatDate } from "@/lib/format";
+import { EmptyState } from "@/components/EmptyState";
 import { MembersTable } from "./MembersTable";
 
 const PAGE_SIZE = 50;
@@ -84,7 +85,15 @@ export default async function MembersPage({
         />
       </form>
 
-      <MembersTable rows={rows} canWrite={canWrite} />
+      {total === 0 && !q ? (
+        <EmptyState
+          title="No members yet"
+          description="Add your first member, or import a roster from CSV in Settings."
+          cta={canWrite ? { href: "/members/new", label: t("members.newMember") } : undefined}
+        />
+      ) : (
+        <MembersTable rows={rows} canWrite={canWrite} />
+      )}
 
       <div className="flex items-center justify-between text-sm text-gray-600">
         <span>

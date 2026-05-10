@@ -39,7 +39,7 @@ export async function createMember(formData: FormData) {
   });
 
   revalidatePath("/members");
-  redirect(`/members/${member.id}`);
+  redirect(`/members/${member.id}?ok=Member%20created`);
 }
 
 export async function updateMember(id: string, formData: FormData) {
@@ -67,6 +67,7 @@ export async function updateMember(id: string, formData: FormData) {
 
   revalidatePath("/members");
   revalidatePath(`/members/${id}`);
+  redirect(`/members/${id}?ok=Saved`);
 }
 
 export async function deleteMember(id: string) {
@@ -76,7 +77,48 @@ export async function deleteMember(id: string) {
     data: { deletedAt: new Date() },
   });
   revalidatePath("/members");
-  redirect("/members");
+  redirect("/members?ok=Member%20deleted");
+}
+
+const addressSchema = z.object({
+  street1: z.string().min(1).max(200),
+  street2: z.string().max(200).optional().or(z.literal("")),
+  city: z.string().min(1).max(100),
+  state: z.string().min(1).max(50),
+  zip: z.string().min(1).max(20),
+  country: z.string().max(50).optional().or(z.literal("")),
+});
+
+export async function addAddress(memberId: string, formData: FormData) {
+  await requireCapability("members.write");
+  const parsed = addressSchema.parse({
+    street1: formData.get("street1"),
+    street2: formData.get("street2") ?? "",
+    city: formData.get("city"),
+    state: formData.get("state"),
+    zip: formData.get("zip"),
+    country: formData.get("country") ?? "US",
+  });
+  const existing = await prisma.address.count({ where: { memberId } });
+  await prisma.address.create({
+    data: {
+      memberId,
+      street1: parsed.street1,
+      street2: parsed.street2 || null,
+      city: parsed.city,
+      state: parsed.state,
+      zip: parsed.zip,
+      country: parsed.country || "US",
+      isPrimary: existing === 0,
+    },
+  });
+  revalidatePath(`/members/${memberId}`);
+}
+
+export async function deleteAddress(memberId: string, addressId: string) {
+  await requireCapability("members.write");
+  await prisma.address.delete({ where: { id: addressId } });
+  revalidatePath(`/members/${memberId}`);
 }
 
 const fieldSchema = z.union([

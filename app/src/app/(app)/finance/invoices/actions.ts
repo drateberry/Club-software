@@ -79,7 +79,7 @@ export async function createInvoice(formData: FormData) {
   });
 
   revalidatePath("/finance/invoices");
-  redirect(`/finance/invoices/${invoice.id}`);
+  redirect(`/finance/invoices/${invoice.id}?ok=Invoice%20created`);
 }
 
 export async function sendInvoice(id: string) {

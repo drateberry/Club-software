@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/db";
 import { requireCapability } from "@/lib/guards";
 import { hasCapability, type Capability } from "@/lib/capabilities";
+import { EmptyState } from "@/components/EmptyState";
 
 export default async function GroupsPage() {
   const session = await requireCapability("groups.read");
@@ -34,24 +35,24 @@ export default async function GroupsPage() {
         )}
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
-            <tr>
-              <th className="px-4 py-2">{t("groups.name")}</th>
-              <th className="px-4 py-2">{t("groups.description")}</th>
-              <th className="px-4 py-2 text-right">{t("groups.memberCount")}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {groups.length === 0 ? (
+      {groups.length === 0 ? (
+        <EmptyState
+          title={t("groups.noResults")}
+          description="Create groups to organize members by interest, sport, or activity."
+          cta={canWrite ? { href: "/groups/new", label: t("groups.newGroup") } : undefined}
+        />
+      ) : (
+        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+          <table className="min-w-full text-sm">
+            <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
               <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-gray-500">
-                  {t("groups.noResults")}
-                </td>
+                <th className="px-4 py-2">{t("groups.name")}</th>
+                <th className="px-4 py-2">{t("groups.description")}</th>
+                <th className="px-4 py-2 text-right">{t("groups.memberCount")}</th>
               </tr>
-            ) : (
-              groups.map((g) => (
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {groups.map((g) => (
                 <tr key={g.id} className="hover:bg-gray-50">
                   <td className="px-4 py-2">
                     <Link href={`/groups/${g.id}`} className="hover:underline">
@@ -63,11 +64,11 @@ export default async function GroupsPage() {
                     {g._count.memberships}
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

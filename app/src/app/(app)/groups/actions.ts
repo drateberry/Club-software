@@ -27,7 +27,7 @@ export async function createGroup(formData: FormData) {
     },
   });
   revalidatePath("/groups");
-  redirect(`/groups/${group.id}`);
+  redirect(`/groups/${group.id}?ok=Group%20created`);
 }
 
 export async function updateGroup(id: string, formData: FormData) {
@@ -46,4 +46,5 @@ export async function updateGroup(id: string, formData: FormData) {
     },
   });
   revalidatePath(`/groups/${id}`);
+  redirect(`/groups/${id}?ok=Saved`);
 }

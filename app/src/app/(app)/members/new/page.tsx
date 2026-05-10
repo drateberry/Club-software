@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { requireCapability } from "@/lib/guards";
+import { SubmitButton } from "@/components/SubmitButton";
 import { createMember } from "../actions";
 
 export default async function NewMemberPage() {
@@ -77,12 +78,7 @@ export default async function NewMemberPage() {
           >
             {t("common.cancel")}
           </Link>
-          <button
-            type="submit"
-            className="rounded bg-black px-4 py-2 text-sm font-medium text-white"
-          >
-            {t("common.save")}
-          </button>
+          <SubmitButton pendingLabel="Creating…">{t("common.save")}</SubmitButton>
         </div>
       </form>
     </div>
