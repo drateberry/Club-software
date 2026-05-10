@@ -1,0 +1,37 @@
+{
+  "app": {
+    "name": "Club OS"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "members": "Members",
+    "groups": "Groups",
+    "committees": "Committees",
+    "events": "Events",
+    "calendar": "Calendar",
+    "finance": "Finance",
+    "invoices": "Invoices",
+    "houseAccounts": "House Accounts",
+    "compliance": "Compliance",
+    "tasks": "Tasks",
+    "feedback": "Feedback",
+    "settings": "Settings",
+    "profile": "Profile",
+    "signOut": "Sign out"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "email": "Email address",
+    "password": "Password",
+    "magicLink": "Email me a sign-in link",
+    "or": "or",
+    "checkEmail": "Check your email",
+    "checkEmailDescription": "We sent you a sign-in link. Click it to continue.",
+    "invalidCredentials": "Invalid email or password.",
+    "linkSent": "Sign-in link sent."
+  },
+  "home": {
+    "welcome": "Welcome to Club OS",
+    "tagline": "Member management for country, yacht and golf clubs."
+  }
+}
