@@ -1,4 +1,6 @@
 import { Sidebar } from "@/components/Sidebar";
+import { CommandMenu } from "@/components/CommandMenu";
+import { FeedbackButton } from "@/components/FeedbackButton";
 import { requireSession } from "@/lib/guards";
 import { effectiveCapabilities, type Capability } from "@/lib/capabilities";
 
@@ -24,6 +26,8 @@ export default async function AppLayout({
       <div className="flex flex-1 flex-col overflow-hidden">
         <main className="flex-1 overflow-y-auto bg-gray-50 p-6">{children}</main>
       </div>
+      <CommandMenu />
+      <FeedbackButton />
     </div>
   );
 }

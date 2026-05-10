@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireCapability } from "@/lib/guards";
 import { hasCapability, type Capability } from "@/lib/capabilities";
 import { formatDate } from "@/lib/format";
+import { MembersTable } from "./MembersTable";
 
 const PAGE_SIZE = 50;
 
@@ -47,6 +48,18 @@ export default async function MembersPage({
     "members.write"
   );
 
+  const rows = members.map((m) => ({
+    id: m.id,
+    memberNumber: m.memberNumber,
+    firstName: m.firstName,
+    lastName: m.lastName,
+    email: m.email,
+    phone: m.phone,
+    membershipClass: m.membershipClass,
+    membershipStatus: m.membershipStatus,
+    joinDateFormatted: formatDate(m.joinDate),
+  }));
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -71,48 +84,11 @@ export default async function MembersPage({
         />
       </form>
 
-      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-50 text-left text-xs uppercase tracking-wider text-gray-500">
-            <tr>
-              <th className="px-4 py-2">{t("members.memberNumber")}</th>
-              <th className="px-4 py-2">{t("members.name")}</th>
-              <th className="px-4 py-2">{t("members.class")}</th>
-              <th className="px-4 py-2">{t("members.status")}</th>
-              <th className="px-4 py-2">{t("members.email")}</th>
-              <th className="px-4 py-2">{t("members.joined")}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {members.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-gray-500">
-                  {t("members.noResults")}
-                </td>
-              </tr>
-            ) : (
-              members.map((m) => (
-                <tr key={m.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-2 text-gray-500">{m.memberNumber}</td>
-                  <td className="px-4 py-2">
-                    <Link href={`/members/${m.id}`} className="hover:underline">
-                      {m.firstName} {m.lastName}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-2 text-gray-600">{m.membershipClass}</td>
-                  <td className="px-4 py-2 text-gray-600">{m.membershipStatus}</td>
-                  <td className="px-4 py-2 text-gray-600">{m.email}</td>
-                  <td className="px-4 py-2 text-gray-500">{formatDate(m.joinDate)}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <MembersTable rows={rows} canWrite={canWrite} />
 
       <div className="flex items-center justify-between text-sm text-gray-600">
         <span>
-          {(pageNum - 1) * PAGE_SIZE + 1}–{Math.min(pageNum * PAGE_SIZE, total)} of{" "}
+          {total === 0 ? 0 : (pageNum - 1) * PAGE_SIZE + 1}–{Math.min(pageNum * PAGE_SIZE, total)} of{" "}
           {total.toLocaleString()}
         </span>
         <div className="flex gap-2">
