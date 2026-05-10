@@ -191,6 +191,23 @@ export default async function MemberDetailPage({
         </div>
       </section>
 
+      <section className="rounded-lg border border-gray-200 bg-white p-4">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-sm font-semibold text-gray-700">Payment methods</h2>
+          {canWrite && (
+            <Link
+              href={`/members/${member.id}/payment-methods`}
+              className="text-xs text-gray-600 hover:underline"
+            >
+              Manage →
+            </Link>
+          )}
+        </div>
+        <p className="mt-2 text-xs text-gray-500">
+          Save a card on file so staff can charge invoices off-session.
+        </p>
+      </section>
+
       {member.invoices.length > 0 && (
         <section className="rounded-lg border border-gray-200 bg-white p-4">
           <h2 className="mb-3 text-sm font-semibold text-gray-700">

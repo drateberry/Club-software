@@ -141,8 +141,10 @@ model Member {
   linkedTasks           Task[]
   checkinLogs           CheckinLog[]
   conversations         Conversation[]
+  paymentMethods        SavedPaymentMethod[]
 
-  twilioOptedOut Boolean @default(false)
+  twilioOptedOut    Boolean @default(false)
+  stripeCustomerId  String? @unique
 
   @@index([lastName, firstName])
   @@index([membershipStatus])
@@ -676,4 +678,26 @@ model OutboundOptOut {
   phone     String   @id
   reason    String?
   createdAt DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Card-on-file payment methods (distinct from the PaymentMethod enum on
+// historical Payment rows, which records the channel of a single transaction).
+// ─────────────────────────────────────────────────────────────────────────────
+
+model SavedPaymentMethod {
+  id                    String        @id @default(cuid())
+  memberId              String
+  stripePaymentMethodId String        @unique
+  kind                  PaymentMethod
+  brand                 String?
+  last4                 String
+  expMonth              Int?
+  expYear               Int?
+  isDefault             Boolean       @default(false)
+  createdAt             DateTime      @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
 }

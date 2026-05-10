@@ -20,6 +20,16 @@ export type WebhookMatch =
   | { kind: "installment"; installmentId: string; paid: boolean; amountCents: number; method: "CARD" | "ACH" | "OTHER" }
   | { kind: "invoice"; invoiceId: string; paid: boolean; amountCents: number; method: "CARD" | "ACH" | "OTHER" }
   | { kind: "event_ticket"; attendanceId: string; paid: boolean; amountCents: number; method: "CARD" | "ACH" | "OTHER" }
+  | {
+      kind: "payment_method_saved";
+      memberId: string;
+      stripePaymentMethodId: string;
+      brand: string | null;
+      last4: string;
+      expMonth: number | null;
+      expYear: number | null;
+      paymentMethodKind: "CARD" | "ACH";
+    }
   | { kind: "ignored" };
 
 export type ProcessedWebhook = {

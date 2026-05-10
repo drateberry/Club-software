@@ -123,3 +123,48 @@ export async function voidInvoice(id: string) {
   revalidatePath("/finance/invoices");
   revalidatePath(`/finance/invoices/${id}`);
 }
+
+export async function chargeInvoiceOnFile(invoiceId: string) {
+  const session = await requireCapability("payments.chargeOnFile");
+  const invoice = await prisma.invoice.findUnique({
+    where: { id: invoiceId },
+    include: { installments: { orderBy: { sequence: "asc" } } },
+  });
+  if (!invoice) {
+    redirect(`/finance/invoices?err=Invoice%20not%20found`);
+  }
+  if (invoice.status === InvoiceStatus.PAID) {
+    redirect(`/finance/invoices/${invoiceId}?err=Already%20paid`);
+  }
+  if (invoice.status === InvoiceStatus.VOID) {
+    redirect(`/finance/invoices/${invoiceId}?err=Invoice%20is%20void`);
+  }
+
+  const nextInstallment = invoice.installments.find((i) => i.status !== "PAID");
+  const amountCents = nextInstallment
+    ? nextInstallment.amountCents + nextInstallment.adminFeeCents
+    : invoice.totalCents;
+
+  const { chargeOnFile } = await import("@/lib/payments/chargeOnFile");
+  try {
+    const result = await chargeOnFile({
+      memberId: invoice.memberId,
+      amountCents,
+      description: `Invoice ${invoice.number}${nextInstallment ? ` — installment ${nextInstallment.sequence}` : ""}`,
+      invoiceId: nextInstallment ? undefined : invoice.id,
+      installmentId: nextInstallment?.id,
+    });
+    await logAudit(session.user.id, "payment.chargeOnFile", "Invoice", invoice.id, {
+      amountCents,
+      paymentIntentId: result.paymentIntentId,
+      status: result.status,
+    });
+    revalidatePath(`/finance/invoices/${invoiceId}`);
+    redirect(
+      `/finance/invoices/${invoiceId}?ok=${encodeURIComponent(`Charged ${(amountCents / 100).toFixed(2)} ${invoice.currency}`)}`
+    );
+  } catch (err) {
+    const msg = (err as Error).message;
+    redirect(`/finance/invoices/${invoiceId}?err=${encodeURIComponent(msg)}`);
+  }
+}

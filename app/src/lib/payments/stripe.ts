@@ -75,6 +75,65 @@ export const StripeProvider: PaymentProvider = {
       raw,
     });
 
+    if (event.type === "setup_intent.succeeded") {
+      const setupIntent = event.data.object as Stripe.SetupIntent;
+      const memberId = (setupIntent.metadata ?? {}).memberId;
+      const pmId = typeof setupIntent.payment_method === "string"
+        ? setupIntent.payment_method
+        : setupIntent.payment_method?.id ?? null;
+      if (!memberId || !pmId) return ignored();
+
+      const pm = await stripe.paymentMethods.retrieve(pmId);
+      const card = pm.card;
+      const usBank = pm.us_bank_account;
+      const match: WebhookMatch = {
+        kind: "payment_method_saved",
+        memberId,
+        stripePaymentMethodId: pm.id,
+        brand: card?.brand ?? (usBank ? "us_bank_account" : null),
+        last4: card?.last4 ?? usBank?.last4 ?? "",
+        expMonth: card?.exp_month ?? null,
+        expYear: card?.exp_year ?? null,
+        paymentMethodKind: usBank ? "ACH" : "CARD",
+      };
+      return { providerEventId: event.id, match, raw };
+    }
+
+    if (event.type === "payment_intent.succeeded") {
+      const intent = event.data.object as Stripe.PaymentIntent;
+      const meta = intent.metadata ?? {};
+      const method = methodFromPaymentMethodTypes(intent.payment_method_types);
+      const amountCents = intent.amount_received ?? intent.amount ?? 0;
+
+      let match: WebhookMatch = { kind: "ignored" };
+      if (meta.installmentId) {
+        match = {
+          kind: "installment",
+          installmentId: meta.installmentId,
+          paid: true,
+          amountCents,
+          method,
+        };
+      } else if (meta.invoiceId) {
+        match = {
+          kind: "invoice",
+          invoiceId: meta.invoiceId,
+          paid: true,
+          amountCents,
+          method,
+        };
+      } else if (meta.attendanceId) {
+        match = {
+          kind: "event_ticket",
+          attendanceId: meta.attendanceId,
+          paid: true,
+          amountCents,
+          method,
+        };
+      }
+      return { providerEventId: event.id, match, raw };
+    }
+
     if (event.type !== "checkout.session.completed") return ignored();
 
     const session = event.data.object as Stripe.Checkout.Session;

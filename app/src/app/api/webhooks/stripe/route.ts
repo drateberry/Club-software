@@ -62,6 +62,30 @@ export async function POST(req: Request) {
       where: { id: processed.match.attendanceId },
       data: { ticketPaidAt: new Date() },
     });
+  } else if (processed.match.kind === "payment_method_saved") {
+    const m = processed.match;
+    const existingMethods = await prisma.savedPaymentMethod.count({
+      where: { memberId: m.memberId },
+    });
+    await prisma.savedPaymentMethod.upsert({
+      where: { stripePaymentMethodId: m.stripePaymentMethodId },
+      create: {
+        memberId: m.memberId,
+        stripePaymentMethodId: m.stripePaymentMethodId,
+        kind: m.paymentMethodKind,
+        brand: m.brand,
+        last4: m.last4,
+        expMonth: m.expMonth,
+        expYear: m.expYear,
+        isDefault: existingMethods === 0,
+      },
+      update: {
+        brand: m.brand,
+        last4: m.last4,
+        expMonth: m.expMonth,
+        expYear: m.expYear,
+      },
+    });
   }
 
   await prisma.webhookEvent.update({

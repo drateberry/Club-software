@@ -4,7 +4,8 @@ import { prisma } from "@/lib/db";
 import { requireCapability } from "@/lib/guards";
 import { hasCapability, type Capability } from "@/lib/capabilities";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
-import { sendInvoice, voidInvoice } from "../actions";
+import { ConfirmButton } from "@/components/ConfirmButton";
+import { sendInvoice, voidInvoice, chargeInvoiceOnFile } from "../actions";
 
 export default async function InvoiceDetailPage({
   params,
@@ -17,7 +18,7 @@ export default async function InvoiceDetailPage({
   const invoice = await prisma.invoice.findUnique({
     where: { id },
     include: {
-      member: true,
+      member: { include: { paymentMethods: { where: { isDefault: true } } } },
       lines: true,
       installments: { orderBy: { sequence: "asc" } },
       payments: { orderBy: { createdAt: "desc" } },
@@ -25,11 +26,11 @@ export default async function InvoiceDetailPage({
   });
   if (!invoice) notFound();
 
-  const canWrite = hasCapability(
-    session.user.role,
-    (session.user.capabilities ?? []) as Capability[],
-    "finance.write"
-  );
+  const caps = (session.user.capabilities ?? []) as Capability[];
+  const canWrite = hasCapability(session.user.role, caps, "finance.write");
+  const canChargeOnFile = hasCapability(session.user.role, caps, "payments.chargeOnFile");
+  const defaultPm = invoice.member.paymentMethods[0];
+  const charge = chargeInvoiceOnFile.bind(null, invoice.id);
   const baseUrl = process.env.CLUB_PUBLIC_URL ?? "http://localhost:3000";
   const publicUrl = `${baseUrl}/pay/${invoice.paymentToken}`;
   const send = sendInvoice.bind(null, invoice.id);
@@ -134,6 +135,30 @@ export default async function InvoiceDetailPage({
           card or ACH.
         </p>
       </section>
+
+      {canChargeOnFile && defaultPm && invoice.status !== "PAID" && invoice.status !== "VOID" && (
+        <section className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <h2 className="mb-2 text-sm font-semibold text-blue-900">Charge card on file</h2>
+          <p className="mb-3 text-xs text-blue-900">
+            Default method:{" "}
+            <strong>
+              {defaultPm.brand?.toUpperCase() ?? defaultPm.kind} •••• {defaultPm.last4}
+            </strong>
+            . This runs an off-session PaymentIntent and marks the next unpaid
+            installment (or full invoice) as paid.
+          </p>
+          <form action={charge}>
+            <ConfirmButton
+              message={`Charge the default card on file for invoice ${invoice.number}?`}
+              confirmLabel="Charge"
+              pendingLabel="Charging…"
+              variant="primary"
+            >
+              Charge on file
+            </ConfirmButton>
+          </form>
+        </section>
+      )}
 
       {canWrite && (
         <div className="flex gap-2">
