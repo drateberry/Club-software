@@ -171,9 +171,21 @@ export default async function EventDetailPage({
         )}
       </section>
 
+      {event.isTicketed && (
+        <section className="rounded-lg border border-gray-200 bg-white p-4">
+          <h2 className="mb-2 text-sm font-semibold text-gray-700">Public ticket link</h2>
+          <p className="break-all rounded bg-gray-50 px-3 py-2 text-xs text-gray-700">
+            {process.env.CLUB_PUBLIC_URL ?? "http://localhost:3000"}/pay/event/{event.publicToken}
+          </p>
+          <p className="mt-2 text-xs text-gray-500">
+            Share with non-members to buy guest tickets at {formatMoney(event.guestPriceCents || event.memberPriceCents)} each.
+          </p>
+        </section>
+      )}
+
       {canEdit && (
         <p className="text-xs text-gray-500">
-          Edit and cancellation come in Phase 5.
+          Edit and cancellation come in a later round.
         </p>
       )}
     </div>
