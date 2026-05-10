@@ -2,29 +2,39 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { auth, signIn } from "@/auth";
 
+function safeRedirectTo(raw: string | null | undefined): string {
+  if (!raw) return "/";
+  // Only allow same-origin paths to prevent open redirects
+  if (raw.startsWith("/") && !raw.startsWith("//")) return raw;
+  return "/";
+}
+
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; callbackUrl?: string }>;
 }) {
   const session = await auth();
-  if (session) redirect("/");
+  const { error, callbackUrl } = await searchParams;
+  const target = safeRedirectTo(callbackUrl);
+  if (session) redirect(target);
 
-  const { error } = await searchParams;
   const t = await getTranslations();
 
   async function magicLink(formData: FormData) {
     "use server";
     const email = String(formData.get("email") ?? "").trim();
+    const cb = safeRedirectTo(String(formData.get("callbackUrl") ?? "/"));
     if (!email) return;
-    await signIn("nodemailer", { email, redirectTo: "/" });
+    await signIn("nodemailer", { email, redirectTo: cb });
   }
 
   async function passwordSignIn(formData: FormData) {
     "use server";
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
-    await signIn("credentials", { email, password, redirectTo: "/" });
+    const cb = safeRedirectTo(String(formData.get("callbackUrl") ?? "/"));
+    await signIn("credentials", { email, password, redirectTo: cb });
   }
 
   return (
@@ -39,6 +49,7 @@ export default async function LoginPage({
         )}
 
         <form action={magicLink} className="space-y-3">
+          <input type="hidden" name="callbackUrl" value={target} />
           <label className="block text-sm font-medium">
             {t("auth.email")}
             <input
@@ -63,6 +74,7 @@ export default async function LoginPage({
         </div>
 
         <form action={passwordSignIn} className="space-y-3">
+          <input type="hidden" name="callbackUrl" value={target} />
           <label className="block text-sm font-medium">
             {t("auth.email")}
             <input

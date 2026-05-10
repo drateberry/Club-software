@@ -45,6 +45,8 @@ model User {
   assignedTasks      Task[]        @relation("TaskAssignedTo")
   auditEvents        AuditEvent[]
   sentMessages       Message[]     @relation("MessageSentBy")
+  mcpAuthorizations  MCPAuthorization[]
+  mcpTokens          MCPToken[]
 }
 
 model Account {
@@ -700,4 +702,54 @@ model SavedPaymentMethod {
   member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@index([memberId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MCP (Model Context Protocol) — OAuth 2.1 + DCR + bearer tokens
+// ─────────────────────────────────────────────────────────────────────────────
+
+model MCPClient {
+  id           String   @id @default(cuid())
+  clientId     String   @unique
+  name         String
+  redirectUris Json
+  createdAt    DateTime @default(now())
+
+  authorizations MCPAuthorization[]
+  tokens         MCPToken[]
+}
+
+model MCPAuthorization {
+  id            String   @id @default(cuid())
+  userId        String
+  mcpClientId   String
+  scopes        Json
+  code          String?  @unique
+  codeChallenge String?
+  redirectUri   String
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mcpClient MCPClient @relation(fields: [mcpClientId], references: [clientId], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model MCPToken {
+  id         String    @id @default(cuid())
+  userId     String
+  mcpClientId String
+  tokenHash  String    @unique
+  scopes     Json
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mcpClient MCPClient @relation(fields: [mcpClientId], references: [clientId], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([mcpClientId])
 }
