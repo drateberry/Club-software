@@ -22,6 +22,8 @@
     "@auth/prisma-adapter": "^2.7.4",
     "@prisma/client": "^6.1.0",
     "bcryptjs": "^2.4.3",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.14.0",
     "next": "16.2.6",
     "next-auth": "5.0.0-beta.25",
     "next-intl": "^4.11.1",

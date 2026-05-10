@@ -13,6 +13,7 @@
     "invoices": "Invoices",
     "houseAccounts": "House Accounts",
     "compliance": "Compliance",
+    "checkin": "Check-in",
     "tasks": "Tasks",
     "feedback": "Feedback",
     "settings": "Settings",
@@ -33,5 +34,121 @@
   "home": {
     "welcome": "Welcome to Club OS",
     "tagline": "Member management for country, yacht and golf clubs."
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "totalMembers": "Active members",
+    "openInvoices": "Open invoices",
+    "outstanding": "Outstanding balance",
+    "upcomingEvents": "Upcoming events",
+    "openTasks": "Open tasks",
+    "noTasks": "No open tasks.",
+    "noEvents": "No upcoming events.",
+    "recentMembers": "Recent members"
+  },
+  "members": {
+    "title": "Members",
+    "newMember": "New member",
+    "name": "Name",
+    "memberNumber": "Member #",
+    "class": "Class",
+    "status": "Status",
+    "email": "Email",
+    "phone": "Phone",
+    "joined": "Joined",
+    "noResults": "No members found.",
+    "search": "Search members…",
+    "saveChanges": "Save changes",
+    "delete": "Delete",
+    "confirmDelete": "Are you sure you want to delete this member?",
+    "addresses": "Addresses",
+    "dependents": "Dependents",
+    "memberships": "Memberships",
+    "houseAccountBalance": "House account balance",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "createdSuccess": "Member created."
+  },
+  "groups": {
+    "title": "Groups",
+    "newGroup": "New group",
+    "name": "Name",
+    "description": "Description",
+    "memberCount": "Members",
+    "noResults": "No groups found.",
+    "noMembers": "No members in this group yet."
+  },
+  "committees": {
+    "title": "Committees",
+    "newCommittee": "New committee",
+    "noResults": "No committees found.",
+    "memberCount": "Members"
+  },
+  "events": {
+    "title": "Events",
+    "noResults": "No upcoming events.",
+    "venue": "Venue",
+    "capacity": "Capacity",
+    "ticketed": "Ticketed",
+    "free": "Free"
+  },
+  "calendar": {
+    "title": "Calendar",
+    "today": "Today",
+    "noEvents": "No events scheduled."
+  },
+  "tasks": {
+    "title": "Tasks",
+    "newTask": "New task",
+    "open": "Open",
+    "inProgress": "In progress",
+    "done": "Done",
+    "archived": "Archived",
+    "noTasks": "No tasks yet."
+  },
+  "feedback": {
+    "title": "Feedback",
+    "newFeedback": "New feedback",
+    "noFeedback": "No feedback yet.",
+    "page": "Page",
+    "submitted": "Submitted",
+    "status": "Status"
+  },
+  "settings": {
+    "title": "Settings",
+    "tabs": {
+      "branding": "Branding",
+      "locale": "Locale",
+      "payments": "Payments",
+      "email": "Email",
+      "houseAccounts": "House Accounts",
+      "compliance": "Compliance",
+      "users": "Users & Roles"
+    },
+    "branding": {
+      "clubName": "Club name",
+      "logo": "Logo",
+      "primaryColor": "Primary color"
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "name": "Name",
+    "email": "Email",
+    "memberLink": "Linked member"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "back": "Back",
+    "loading": "Loading…",
+    "error": "Something went wrong.",
+    "yes": "Yes",
+    "no": "No",
+    "active": "Active",
+    "suspended": "Suspended",
+    "resigned": "Resigned",
+    "deceased": "Deceased"
   }
 }

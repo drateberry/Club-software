@@ -1,7 +1,6 @@
 import PgBoss from "pg-boss";
 
 declare global {
-  // eslint-disable-next-line no-var
   var __pgBoss: PgBoss | undefined;
 }
 

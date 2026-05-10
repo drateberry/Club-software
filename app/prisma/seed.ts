@@ -103,7 +103,7 @@ async function main() {
   }
 
   console.log("[seed] creating 2 groups + memberships");
-  const golfGroup = await prisma.group.create({
+  await prisma.group.create({
     data: {
       name: "Golf Committee Members",
       description: "Members active in golf programming",
@@ -113,7 +113,7 @@ async function main() {
       },
     },
   });
-  const tennisGroup = await prisma.group.create({
+  await prisma.group.create({
     data: {
       name: "Tennis & Pickleball",
       description: "Racquet sports members",
