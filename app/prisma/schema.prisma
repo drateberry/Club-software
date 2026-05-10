@@ -1,5 +1,6 @@
-// Phase 0 schema: Auth.js tables only.
-// Full domain schema lands in Phase 1.
+// Phase 1 schema: full core domain for US country / yacht / golf clubs.
+// All money in cents. All datetimes UTC. Soft-delete via deletedAt where audit
+// matters. Foreign keys cascade on the parent and restrict on lookup tables.
 
 generator client {
   provider = "prisma-client-js"
@@ -10,6 +11,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Auth & users
+// ─────────────────────────────────────────────────────────────────────────────
+
 enum UserRole {
   ADMIN
   STAFF
@@ -17,20 +22,28 @@ enum UserRole {
 }
 
 model User {
-  id              String    @id @default(cuid())
-  email           String    @unique
-  emailVerified   DateTime?
-  name            String?
-  image           String?
-  passwordHash    String?
-  role            UserRole  @default(MEMBER)
-  capabilities    Json      @default("[]")
-  passToken       String?   @unique
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  image         String?
+  passwordHash  String?
+  role          UserRole  @default(MEMBER)
+  capabilities  Json      @default("[]")
+  passToken     String?   @unique
+  memberId      String?   @unique
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
+  member   Member?   @relation(fields: [memberId], references: [id], onDelete: SetNull)
   accounts Account[]
   sessions Session[]
+
+  postedHouseCharges HouseCharge[] @relation("HouseChargePostedBy")
+  uploadedAssets     MediaAsset[]
+  createdTasks       Task[]        @relation("TaskCreatedBy")
+  assignedTasks      Task[]        @relation("TaskAssignedTo")
+  auditEvents        AuditEvent[]
 }
 
 model Account {
@@ -66,4 +79,537 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Members
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum Gender {
+  MALE
+  FEMALE
+  NON_BINARY
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum MembershipStatus {
+  ACTIVE
+  SUSPENDED
+  RESIGNED
+  DECEASED
+}
+
+model Member {
+  id               String           @id @default(cuid())
+  memberNumber     String?          @unique
+  firstName        String
+  lastName         String
+  email            String?          @unique
+  phone            String?
+  gender           Gender?
+  pronouns         String?
+  birthDate        DateTime?        @db.Date
+  joinDate         DateTime?        @db.Date
+  membershipClass  String?
+  membershipStatus MembershipStatus @default(ACTIVE)
+  sponsorId        String?
+  spouseId         String?          @unique
+  photoUrl         String?
+  customFields     Json             @default("{}")
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  deletedAt        DateTime?
+
+  user      User?
+  sponsor   Member?  @relation("MemberSponsor", fields: [sponsorId], references: [id], onDelete: SetNull)
+  sponsored Member[] @relation("MemberSponsor")
+  spouse    Member?  @relation("MemberSpouse", fields: [spouseId], references: [id], onDelete: SetNull)
+  spouseOf  Member?  @relation("MemberSpouse")
+
+  addresses             Address[]
+  dependents            Dependent[]
+  groupMemberships      GroupMembership[]
+  committeeMemberships  CommitteeMembership[]
+  invoices              Invoice[]
+  houseCharges          HouseCharge[]
+  statements            Statement[]
+  eventAttendances      EventAttendance[]
+  complianceCertificates ComplianceCertificate[]
+  feedback              Feedback[]
+  linkedTasks           Task[]
+  checkinLogs           CheckinLog[]
+
+  @@index([lastName, firstName])
+  @@index([membershipStatus])
+  @@index([deletedAt])
+}
+
+model Address {
+  id           String  @id @default(cuid())
+  memberId     String
+  street1      String
+  street2      String?
+  city         String
+  state        String
+  zip          String
+  country      String  @default("US")
+  isPrimary    Boolean @default(false)
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+}
+
+model Dependent {
+  id           String    @id @default(cuid())
+  memberId     String
+  name         String
+  relationship String
+  birthDate    DateTime? @db.Date
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Groups & committees
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  type        String?
+  customFields Json    @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  memberships GroupMembership[]
+
+  @@index([deletedAt])
+}
+
+model GroupMembership {
+  id       String  @id @default(cuid())
+  groupId  String
+  memberId String
+  role     String?
+
+  group  Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, memberId])
+}
+
+model Committee {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  memberships CommitteeMembership[]
+
+  @@index([deletedAt])
+}
+
+model CommitteeMembership {
+  id          String  @id @default(cuid())
+  committeeId String
+  memberId    String
+  role        String?
+
+  committee Committee @relation(fields: [committeeId], references: [id], onDelete: Cascade)
+  member    Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([committeeId, memberId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Events & RSVP / ticketing
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Event {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  startAt       DateTime
+  endAt         DateTime
+  venue         String?
+  capacity      Int?
+  memberPriceCents Int    @default(0)
+  guestPriceCents  Int    @default(0)
+  rsvpDeadline  DateTime?
+  isTicketed    Boolean   @default(false)
+  publicToken   String    @unique @default(cuid())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  attendances EventAttendance[]
+
+  @@index([startAt])
+  @@index([deletedAt])
+}
+
+enum AttendanceStatus {
+  GOING
+  MAYBE
+  DECLINED
+}
+
+model EventAttendance {
+  id              String           @id @default(cuid())
+  eventId         String
+  memberId        String?
+  guestName       String?
+  guestEmail      String?
+  status          AttendanceStatus @default(GOING)
+  ticketPaidAt    DateTime?
+  paymentId       String?
+  createdAt       DateTime         @default(now())
+
+  event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  member  Member? @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@unique([eventId, memberId])
+  @@index([eventId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Calendar (read-only and external feeds, separate from RSVPable Events)
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum CalendarSource {
+  INTERNAL
+  ICAL_FEED
+}
+
+model CalendarEvent {
+  id        String         @id @default(cuid())
+  title     String
+  start     DateTime
+  end       DateTime
+  allDay    Boolean        @default(false)
+  location  String?
+  source    CalendarSource @default(INTERNAL)
+  feedUrl   String?
+  createdAt DateTime       @default(now())
+
+  @@index([start])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Invoicing & installments
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  VOID
+}
+
+enum InvoiceKind {
+  DUES
+  EVENT
+  STATEMENT
+  ASSESSMENT
+  OTHER
+}
+
+enum InstallmentStatus {
+  PENDING
+  SENT
+  PAID
+}
+
+enum PaymentMethod {
+  CARD
+  ACH
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  number        String        @unique
+  memberId      String
+  status        InvoiceStatus @default(DRAFT)
+  kind          InvoiceKind   @default(OTHER)
+  currency      String        @default("USD")
+  totalCents    Int
+  dueDate       DateTime?     @db.Date
+  paymentToken  String        @unique @default(cuid())
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  paidAt        DateTime?
+
+  member       Member        @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  lines        InvoiceLine[]
+  installments Installment[]
+  payments     Payment[]
+  statement    Statement?
+  houseCharges HouseCharge[]
+
+  @@index([memberId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model InvoiceLine {
+  id          String      @id @default(cuid())
+  invoiceId   String
+  description String
+  quantity    Int         @default(1)
+  unitCents   Int
+  totalCents  Int
+  kind        InvoiceKind @default(OTHER)
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+model Installment {
+  id                String            @id @default(cuid())
+  invoiceId         String
+  sequence          Int
+  amountCents       Int
+  adminFeeCents     Int               @default(0)
+  dueDate           DateTime          @db.Date
+  status            InstallmentStatus @default(PENDING)
+  providerName      String?
+  providerPaymentId String?           @unique
+  paymentLinkUrl    String?
+  sentAt            DateTime?
+  paidAt            DateTime?
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@unique([invoiceId, sequence])
+  @@index([dueDate])
+  @@index([status])
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  invoiceId         String?
+  providerName      String
+  providerPaymentId String        @unique
+  amountCents       Int
+  currency          String        @default("USD")
+  method            PaymentMethod @default(CARD)
+  status            PaymentStatus @default(PENDING)
+  rawWebhookJson    Json?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  invoice          Invoice?          @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  eventAttendances EventAttendance[]
+
+  @@index([invoiceId])
+  @@index([providerName, providerPaymentId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// House accounts
+// ─────────────────────────────────────────────────────────────────────────────
+
+model HouseCharge {
+  id           String   @id @default(cuid())
+  memberId     String
+  category     String
+  amountCents  Int
+  occurredOn   DateTime @db.Date
+  memo         String?
+  postedById   String?
+  invoiceId    String?
+  createdAt    DateTime @default(now())
+
+  member   Member   @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  postedBy User?    @relation("HouseChargePostedBy", fields: [postedById], references: [id], onDelete: SetNull)
+  invoice  Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@index([memberId, occurredOn])
+  @@index([invoiceId])
+}
+
+model Statement {
+  id          String   @id @default(cuid())
+  memberId    String
+  periodStart DateTime @db.Date
+  periodEnd   DateTime @db.Date
+  invoiceId   String   @unique
+  generatedAt DateTime @default(now())
+
+  member  Member  @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, periodStart])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Compliance / background check
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum ComplianceStatus {
+  PENDING
+  CERTIFIED
+  EXPIRED
+  REVOKED
+}
+
+model ComplianceCertificate {
+  id          String           @id @default(cuid())
+  memberId    String
+  type        String
+  status      ComplianceStatus @default(PENDING)
+  certifiedOn DateTime?        @db.Date
+  expiresOn   DateTime?        @db.Date
+  notes       String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+  @@index([expiresOn])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tasks, feedback, reminders
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  ARCHIVED
+}
+
+model Task {
+  id             String     @id @default(cuid())
+  title          String
+  description    String?
+  dueDate        DateTime?  @db.Date
+  status         TaskStatus @default(OPEN)
+  assigneeId     String?
+  createdById    String
+  linkedMemberId String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  assignee     User?    @relation("TaskAssignedTo", fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdBy    User     @relation("TaskCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  linkedMember Member?  @relation(fields: [linkedMemberId], references: [id], onDelete: SetNull)
+
+  @@index([assigneeId])
+  @@index([status])
+}
+
+enum FeedbackStatus {
+  NEW
+  TRIAGED
+  RESOLVED
+  WONT_FIX
+}
+
+model Feedback {
+  id        String         @id @default(cuid())
+  memberId  String?
+  page      String?
+  message   String
+  status    FeedbackStatus @default(NEW)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  member Member? @relation(fields: [memberId], references: [id], onDelete: SetNull)
+}
+
+model Reminder {
+  id          String    @id @default(cuid())
+  kind        String
+  dueAt       DateTime
+  sentAt      DateTime?
+  payloadJson Json
+  createdAt   DateTime  @default(now())
+
+  @@index([dueAt, sentAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Member pass / check-in
+// ─────────────────────────────────────────────────────────────────────────────
+
+model CheckinLog {
+  id        String   @id @default(cuid())
+  memberId  String
+  scannedAt DateTime @default(now())
+  location  String?
+  notes     String?
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, scannedAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Settings, media, audit, webhook idempotency
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Setting {
+  key       String   @id
+  valueJson Json
+  updatedAt DateTime @updatedAt
+}
+
+model MediaAsset {
+  id           String   @id @default(cuid())
+  url          String
+  contentType  String
+  sizeBytes    Int
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  uploadedBy User? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+}
+
+model WebhookEvent {
+  id              String    @id @default(cuid())
+  providerName    String
+  providerEventId String
+  receivedAt      DateTime  @default(now())
+  processedAt     DateTime?
+  rawJson         Json
+
+  @@unique([providerName, providerEventId])
+  @@index([processedAt])
+}
+
+model AuditEvent {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String
+  diffJson  Json?
+  createdAt DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entity, entityId])
+  @@index([actorId])
 }
