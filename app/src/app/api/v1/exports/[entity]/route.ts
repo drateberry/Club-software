@@ -1,17 +1,46 @@
 import { NextResponse } from "next/server";
-import { authenticateBearer, hasScope } from "@/lib/mcp/auth";
+import { auth } from "@/auth";
+import { authenticateBearer } from "@/lib/mcp/auth";
+import { effectiveCapabilities, type Capability } from "@/lib/capabilities";
 import { consume, rateLimitHeaders } from "@/lib/api/rateLimit";
 import { logAudit } from "@/lib/audit";
 import { getExporter } from "@/lib/csv/exporters";
+import { prisma } from "@/lib/db";
 
 export const runtime = "nodejs";
+
+/** Resolve an auth context from bearer first, then Auth.js session cookie. */
+async function resolveAuth(req: Request): Promise<
+  | { ok: true; userId: string; role: "ADMIN" | "STAFF" | "MEMBER"; effective: Capability[]; scopes: Capability[] }
+  | { ok: false; status: 401 }
+> {
+  const bearer = await authenticateBearer(req.headers.get("authorization"));
+  if (bearer.ok) {
+    return {
+      ok: true,
+      userId: bearer.ctx.user.id,
+      role: bearer.ctx.user.role,
+      effective: bearer.ctx.user.capabilities,
+      scopes: bearer.ctx.scopes,
+    };
+  }
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false, status: 401 };
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true, capabilities: true },
+  });
+  if (!user) return { ok: false, status: 401 };
+  const effective = effectiveCapabilities(user.role, (user.capabilities ?? []) as Capability[]);
+  return { ok: true, userId: session.user.id, role: user.role, effective, scopes: effective };
+}
 
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ entity: string }> }
 ) {
-  const auth = await authenticateBearer(req.headers.get("authorization"));
-  if (!auth.ok) {
+  const resolved = await resolveAuth(req);
+  if (!resolved.ok) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
@@ -20,13 +49,16 @@ export async function GET(
   if (!exporter) {
     return NextResponse.json({ error: "unknown_entity" }, { status: 404 });
   }
-  if (!hasScope(auth.ctx, exporter.scopes)) {
+  const hasRequiredScopes = exporter.scopes.every(
+    (cap) => resolved.scopes.includes(cap) && resolved.effective.includes(cap)
+  );
+  if (!hasRequiredScopes) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
-  if (auth.ctx.user.role === "MEMBER") {
+  if (resolved.role === "MEMBER") {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
-  const limit = consume(`u:${auth.ctx.user.id}`, "strict");
+  const limit = consume(`u:${resolved.userId}`, "strict");
   if (!limit.allowed) {
     return new NextResponse(
       JSON.stringify({ error: "rate_limited" }),
@@ -37,7 +69,7 @@ export async function GET(
     );
   }
 
-  await logAudit(auth.ctx.user.id, "settings.update", "Setting", `export.${entity}`, {
+  await logAudit(resolved.userId, "settings.update", "Setting", `export.${entity}`, {
     action: "csv_export",
   });
 
