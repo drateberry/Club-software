@@ -44,3 +44,17 @@ export async function requireCapability(cap: Capability) {
   }
   return session;
 }
+
+/**
+ * Gate for /operator/* pages. Redirects non-OPERATOR sessions to the
+ * authed app root. Tenant context is already entered by requireSession
+ * (asOperator: true for OPERATOR), which makes the Prisma extension a
+ * no-op so cross-club queries return everything.
+ */
+export async function requireOperator() {
+  const session = await requireSession();
+  if (session.user.role !== "OPERATOR") {
+    redirect("/");
+  }
+  return session;
+}
