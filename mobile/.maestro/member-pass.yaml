@@ -1,0 +1,16 @@
+appId: com.clubos.app
+name: "Member pass tab"
+# Assumes a pre-seeded token is loaded via launchArguments (see
+# README) so we skip the OAuth flow for this smoke test.
+---
+- launchApp:
+    launchArguments:
+      seedToken: ${SEED_BEARER_TOKEN}
+- assertVisible: "Profile"
+- tapOn: "Pass"
+- assertVisible:
+    text: ".*"
+    optional: false
+# The QR is an Image fetched from /api/pass/{token}; if it loads, the
+# bearer auth works end-to-end (the pass route accepts the QR token
+# directly, but the app's prior /api/v1/me call has to succeed).

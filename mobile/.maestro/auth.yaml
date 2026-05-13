@@ -1,0 +1,17 @@
+appId: com.clubos.app
+name: "OAuth sign-in"
+---
+# Smoke check: app boots to /login (token cleared), user taps Sign in,
+# the OS launches the in-app browser which we hand off to. Maestro
+# can't drive the browser-based OAuth consent itself; this flow is
+# the entry point that tests "tapping Sign in opens the OAuth flow".
+- launchApp:
+    clearState: true
+- assertVisible: "Club OS"
+- assertVisible: "Sign in"
+- tapOn: "Sign in"
+# Browser opens the host OAuth authorize page. Maestro cannot drive
+# webview content reliably across iOS + Android, so we end the flow
+# here. A separate integration test (in the web suite) covers the
+# auth + token-exchange path.
+- waitForAnimationToEnd

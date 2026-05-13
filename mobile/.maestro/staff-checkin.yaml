@@ -1,0 +1,13 @@
+appId: com.clubos.app
+name: "Staff check-in (manual fallback)"
+# Camera scanning can't be exercised under Maestro reliably. This flow
+# verifies the staff Check-in tab opens and the today's-feed renders.
+---
+- launchApp:
+    launchArguments:
+      seedToken: ${SEED_BEARER_TOKEN_STAFF}
+- assertVisible: "Members"
+- tapOn: "Check-in"
+- assertVisible: "Scan member pass"
+- assertVisible:
+    text: "(Allow camera|Start scanner)"

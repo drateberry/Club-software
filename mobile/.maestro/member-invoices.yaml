@@ -1,0 +1,10 @@
+appId: com.clubos.app
+name: "Member invoices tab"
+---
+- launchApp:
+    launchArguments:
+      seedToken: ${SEED_BEARER_TOKEN}
+- assertVisible: "Profile"
+- tapOn: "Invoices"
+- assertVisible:
+    text: "INV-.*|No invoices yet."
