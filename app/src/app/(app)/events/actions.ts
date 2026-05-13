@@ -88,6 +88,9 @@ export async function rsvp(eventId: string, formData: FormData) {
     redirect(`/events/${eventId}?err=Your%20user%20is%20not%20linked%20to%20a%20member`);
   }
 
+  type Outcome = "going" | "waitlisted" | "other";
+  let outcome: Outcome = "other";
+  let wasGoingBeforeChange = false;
   await prisma.$transaction(async (tx) => {
     const [event] = await tx.$queryRaw<
       Array<{ id: string; capacity: number | null }>
@@ -95,28 +98,46 @@ export async function rsvp(eventId: string, formData: FormData) {
 
     if (!event) throw new Error("Event not found");
 
+    const existing = await tx.eventAttendance.findUnique({
+      where: { eventId_memberId: { eventId, memberId } },
+    });
+    wasGoingBeforeChange = existing?.status === AttendanceStatus.GOING;
+
+    let effectiveStatus = status;
     if (status === AttendanceStatus.GOING && event.capacity) {
       const going = await tx.eventAttendance.count({
         where: { eventId, status: AttendanceStatus.GOING },
       });
-      const existing = await tx.eventAttendance.findUnique({
-        where: { eventId_memberId: { eventId, memberId } },
-      });
-      const wasGoing = existing?.status === AttendanceStatus.GOING;
-      const projected = going + (wasGoing ? 0 : 1);
+      const projected = going + (wasGoingBeforeChange ? 0 : 1);
       if (projected > event.capacity) {
-        throw new Error("Event is full");
+        // Capacity hit: shunt to waitlist instead of failing.
+        effectiveStatus = AttendanceStatus.WAITLIST;
       }
     }
 
     await tx.eventAttendance.upsert({
       where: { eventId_memberId: { eventId, memberId } },
-      create: { eventId, memberId, status },
-      update: { status },
+      create: { eventId, memberId, status: effectiveStatus },
+      update: { status: effectiveStatus },
     });
+
+    outcome = (
+      effectiveStatus === AttendanceStatus.GOING
+        ? "going"
+        : effectiveStatus === AttendanceStatus.WAITLIST
+          ? "waitlisted"
+          : "other"
+    ) as Outcome;
   });
 
-  if (status === AttendanceStatus.GOING) {
+  // If a previous GOING attendance is now no longer GOING (member
+  // cancelled or moved to MAYBE/DECLINED), promote next waitlister.
+  if (wasGoingBeforeChange && status !== AttendanceStatus.GOING) {
+    const { promoteFromWaitlist } = await import("@/lib/events/waitlist");
+    await promoteFromWaitlist(eventId);
+  }
+
+  if ((outcome as Outcome) === "going") {
     const event = await prisma.event.findUnique({ where: { id: eventId } });
     if (event) {
       await enqueueTriggered("rsvp.confirmed", {
@@ -131,7 +152,12 @@ export async function rsvp(eventId: string, formData: FormData) {
 
   eventChanged(eventId);
   revalidatePath(`/events/${eventId}`);
-  redirect(`/events/${eventId}?ok=RSVP%20saved`);
+
+  const ok =
+    (outcome as Outcome) === "waitlisted"
+      ? "Event%20is%20full%20—%20you're%20on%20the%20waitlist"
+      : "RSVP%20saved";
+  redirect(`/events/${eventId}?ok=${ok}`);
 }
 
 export async function buyTicket(eventId: string) {

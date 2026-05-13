@@ -8,7 +8,8 @@ export type TriggerKey =
   | "invoice.sent"
   | "payment.received"
   | "rsvp.confirmed"
-  | "statement.generated";
+  | "statement.generated"
+  | "waitlist.promoted";
 
 export type TriggerConfig = {
   enabled: boolean;
@@ -33,6 +34,10 @@ export const DEFAULT_TRIGGERS: TriggerMap = {
   "statement.generated": {
     enabled: false,
     template: "{club_name}: Your monthly statement {invoice_number} for {amount} is ready. Pay: {payment_url}",
+  },
+  "waitlist.promoted": {
+    enabled: false,
+    template: "{club_name}: Good news — a spot opened up for {event_title} on {event_date}. You're now confirmed.",
   },
 };
 

@@ -10,6 +10,7 @@ const TRIGGER_LABELS: Record<TriggerKey, string> = {
   "payment.received": "Payment received",
   "rsvp.confirmed": "RSVP confirmed",
   "statement.generated": "Statement generated",
+  "waitlist.promoted": "Waitlist promoted",
 };
 
 export default async function MessagingSettingsPage() {

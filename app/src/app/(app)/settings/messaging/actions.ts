@@ -46,6 +46,7 @@ const TRIGGER_KEYS: TriggerKey[] = [
   "payment.received",
   "rsvp.confirmed",
   "statement.generated",
+  "waitlist.promoted",
 ];
 
 export async function saveTriggers(formData: FormData) {

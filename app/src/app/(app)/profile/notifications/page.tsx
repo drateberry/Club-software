@@ -27,6 +27,11 @@ const TRIGGERS: Array<{ key: TriggerKey; label: string; description: string }> =
     label: "Monthly statements",
     description: "Notify me when my monthly statement is ready.",
   },
+  {
+    key: "waitlist.promoted",
+    label: "Waitlist promotion",
+    description: "Notify me when an event spot opens for me.",
+  },
 ];
 
 const CHANNELS: Array<{ key: Channel; label: string }> = [

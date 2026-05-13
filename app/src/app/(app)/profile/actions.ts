@@ -54,7 +54,13 @@ export async function updateMyProfile(formData: FormData) {
   redirect("/profile?ok=Profile%20updated");
 }
 
-const TRIGGERS = ["invoice.sent", "payment.received", "rsvp.confirmed", "statement.generated"] as const;
+const TRIGGERS = [
+  "invoice.sent",
+  "payment.received",
+  "rsvp.confirmed",
+  "statement.generated",
+  "waitlist.promoted",
+] as const;
 const CHANNELS = ["sms", "email"] as const;
 
 export async function saveNotificationPrefs(formData: FormData) {
