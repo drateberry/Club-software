@@ -14,6 +14,7 @@
     "build:android": "eas build --profile production --platform android"
   },
   "dependencies": {
+    "@club-os/sdk": "file:../packages/club-os-sdk",
     "@tanstack/react-query": "^5.62.7",
     "expo": "~52.0.20",
     "expo-auth-session": "~6.0.1",
