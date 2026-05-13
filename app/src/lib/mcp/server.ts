@@ -98,7 +98,7 @@ export async function handleRequest(
             protocolVersion: PROTOCOL_VERSION,
             capabilities: {
               tools: { listChanged: false },
-              resources: { listChanged: false, subscribe: false },
+              resources: { listChanged: false, subscribe: true },
               prompts: { listChanged: false },
             },
             serverInfo: SERVER_INFO,

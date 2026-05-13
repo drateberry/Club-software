@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getPaymentProvider } from "./index";
 import { enqueueTriggered } from "@/lib/twilio/triggers";
 import { formatMoney } from "@/lib/format";
+import { invoiceChanged } from "@/lib/mcp/events";
 
 export type InstallmentPlan = "full" | "quarterly_3" | "monthly_8";
 
@@ -167,6 +168,7 @@ export async function markInstallmentPaid(args: {
     },
   });
 
+  invoiceChanged(installment.invoiceId);
   return prisma.installment.findUnique({ where: { id: installment.id } });
 }
 
@@ -209,5 +211,6 @@ export async function markInvoicePaid(args: {
     },
   });
 
+  invoiceChanged(args.invoiceId);
   return prisma.invoice.findUnique({ where: { id: args.invoiceId } });
 }

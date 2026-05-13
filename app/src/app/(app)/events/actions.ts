@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { requireSession, requireCapability } from "@/lib/guards";
 import { getPaymentProvider } from "@/lib/payments";
 import { enqueueTriggered } from "@/lib/twilio/triggers";
+import { eventChanged } from "@/lib/mcp/events";
 import { formatDate } from "@/lib/format";
 
 const eventSchema = z.object({
@@ -128,6 +129,7 @@ export async function rsvp(eventId: string, formData: FormData) {
     }
   }
 
+  eventChanged(eventId);
   revalidatePath(`/events/${eventId}`);
   redirect(`/events/${eventId}?ok=RSVP%20saved`);
 }

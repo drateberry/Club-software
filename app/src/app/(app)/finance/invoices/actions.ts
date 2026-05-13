@@ -9,6 +9,7 @@ import { requireCapability } from "@/lib/guards";
 import { logAudit } from "@/lib/audit";
 import { enqueueTriggered } from "@/lib/twilio/triggers";
 import { formatMoney } from "@/lib/format";
+import { invoiceChanged } from "@/lib/mcp/events";
 
 const lineSchema = z.object({
   description: z.string().min(1).max(500),
@@ -86,6 +87,7 @@ export async function createInvoice(formData: FormData) {
     totalCents,
     kind: parsed.kind,
   });
+  invoiceChanged(invoice.id, "create");
 
   revalidatePath("/finance/invoices");
   redirect(`/finance/invoices/${invoice.id}?ok=Invoice%20created`);
@@ -98,6 +100,7 @@ export async function sendInvoice(id: string) {
     data: { status: InvoiceStatus.SENT },
   });
   await logAudit(session.user.id, "invoice.send", "Invoice", id);
+  invoiceChanged(id);
 
   const baseUrl = process.env.CLUB_PUBLIC_URL ?? "http://localhost:3000";
   await enqueueTriggered("invoice.sent", {
@@ -120,6 +123,7 @@ export async function voidInvoice(id: string) {
     data: { status: InvoiceStatus.VOID },
   });
   await logAudit(session.user.id, "invoice.void", "Invoice", id);
+  invoiceChanged(id);
   revalidatePath("/finance/invoices");
   revalidatePath(`/finance/invoices/${id}`);
 }

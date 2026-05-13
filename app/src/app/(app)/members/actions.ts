@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { requireCapability } from "@/lib/guards";
 import { logAudit } from "@/lib/audit";
 import { bulkSendToMembers } from "@/lib/twilio/bulk";
+import { memberChanged } from "@/lib/mcp/events";
 
 const memberSchema = z.object({
   firstName: z.string().min(1).max(100),
@@ -40,6 +41,7 @@ export async function createMember(formData: FormData) {
     },
   });
   await logAudit(session.user.id, "member.create", "Member", member.id, parsed);
+  memberChanged(member.id, "create");
 
   revalidatePath("/members");
   redirect(`/members/${member.id}?ok=Member%20created`);
@@ -68,6 +70,7 @@ export async function updateMember(id: string, formData: FormData) {
     },
   });
   await logAudit(session.user.id, "member.update", "Member", id, parsed);
+  memberChanged(id);
 
   revalidatePath("/members");
   revalidatePath(`/members/${id}`);
@@ -81,6 +84,7 @@ export async function deleteMember(id: string) {
     data: { deletedAt: new Date() },
   });
   await logAudit(session.user.id, "member.delete", "Member", id);
+  memberChanged(id, "delete");
   revalidatePath("/members");
   redirect("/members?ok=Member%20deleted");
 }

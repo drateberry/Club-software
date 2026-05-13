@@ -3,6 +3,7 @@ import { z } from "zod";
 import { authenticateBearer, hasScope } from "@/lib/mcp/auth";
 import type { ToolContext } from "@/lib/mcp/types";
 import type { Capability } from "@/lib/capabilities";
+import { bucketFor, consume, rateLimitHeaders } from "./rateLimit";
 
 export type ApiHandler<I> = (
   input: I,
@@ -41,13 +42,31 @@ export function withApi<I>(opts: {
       );
     }
 
+    const url = new URL(req.url);
+    const limit = consume(`u:${auth.ctx.user.id}`, bucketFor(req.method, url.pathname));
+    if (!limit.allowed) {
+      return new NextResponse(
+        JSON.stringify({
+          error: "rate_limited",
+          error_description: `Try again in ${limit.retryAfter}s`,
+        }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            ...rateLimitHeaders(limit),
+          },
+        }
+      );
+    }
+
     if (!hasScope(auth.ctx, opts.scopes)) {
       return NextResponse.json(
         {
           error: "forbidden",
           error_description: `Required scopes: ${opts.scopes.join(", ")}`,
         },
-        { status: 403 }
+        { status: 403, headers: rateLimitHeaders(limit) }
       );
     }
 
@@ -84,8 +103,13 @@ export function withApi<I>(opts: {
 
     try {
       const result = await opts.handler(parsed, auth.ctx, req);
-      if (result instanceof NextResponse) return result;
-      return NextResponse.json(result);
+      if (result instanceof NextResponse) {
+        for (const [k, v] of Object.entries(rateLimitHeaders(limit))) {
+          result.headers.set(k, v);
+        }
+        return result;
+      }
+      return NextResponse.json(result, { headers: rateLimitHeaders(limit) });
     } catch (err) {
       const message = (err as Error).message;
       // Preserve Next.js redirects which throw as control flow
