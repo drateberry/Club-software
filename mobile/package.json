@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@club-os/sdk": "file:../packages/club-os-sdk",
+    "@stripe/stripe-react-native": "0.45.0",
     "@tanstack/react-query": "^5.62.7",
     "expo": "~52.0.20",
     "expo-auth-session": "~6.0.1",

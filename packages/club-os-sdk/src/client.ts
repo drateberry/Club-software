@@ -174,10 +174,13 @@ export class ClubOSClient {
       query: memberId ? { memberId } : {},
     });
   }
-  createSetupIntent(memberId?: string): Promise<{ clientSecret: string; publishableKey: string | null }> {
-    return this.request("POST", "/api/v1/payment-methods/setup-intent", {
-      body: memberId ? { memberId } : {},
-    });
+  createSetupIntent(args: { memberId?: string; forPaymentSheet?: boolean } = {}): Promise<{
+    clientSecret: string;
+    publishableKey: string | null;
+    customerId: string;
+    ephemeralKey: string | null;
+  }> {
+    return this.request("POST", "/api/v1/payment-methods/setup-intent", { body: args });
   }
   openCustomerPortal(args: { memberId?: string; returnUrl?: string } = {}): Promise<{ url: string }> {
     return this.request("POST", "/api/v1/payment-methods/portal", { body: args });

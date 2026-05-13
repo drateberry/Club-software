@@ -32,6 +32,15 @@ export default function MemberTabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="payment-methods"
+        options={{
+          title: "Payment",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="card-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="pass"
         options={{
           title: "Pass",
