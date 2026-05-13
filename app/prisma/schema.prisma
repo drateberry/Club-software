@@ -33,8 +33,11 @@ model User {
   passToken         String?   @unique
   memberId          String?   @unique
   notificationPrefs Json      @default("{}")
+  clubId            String?   @default("default")
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+
+  club Club? @relation(fields: [clubId], references: [id], onDelete: SetNull)
 
   member   Member?   @relation(fields: [memberId], references: [id], onDelete: SetNull)
   accounts Account[]
@@ -634,6 +637,7 @@ model WebhookEvent {
 model AuditEvent {
   id        String   @id @default(cuid())
   actorId   String?
+  clubId    String?
   action    String
   entity    String
   entityId  String
@@ -641,9 +645,39 @@ model AuditEvent {
   createdAt DateTime @default(now())
 
   actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  club  Club? @relation(fields: [clubId], references: [id], onDelete: SetNull)
 
   @@index([entity, entityId])
   @@index([actorId])
+  @@index([clubId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Multi-tenant Club model.
+// Schema-level foundation only: top-level entities carry an optional
+// clubId. Existing single-tenant installs default everything to one
+// "default" Club; multi-tenant tenant resolution happens in
+// src/lib/tenant.ts. RLS policies + a Prisma client extension that
+// auto-injects { where: { clubId } } on every query are deliberately
+// deferred to a follow-up so this change is additive and zero-risk
+// to the existing flows.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Club {
+  id        String   @id @default("default")
+  slug      String   @unique
+  name      String
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Forward relations land incrementally as auto-scoping is wired.
+  // For v1 only User carries clubId — every other entity reaches the
+  // tenant via User → Club. Adding clubId to additional entities is
+  // additive and non-breaking; the parking lot tracks which to do
+  // next and in what order.
+  users       User[]
+  auditEvents AuditEvent[]
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

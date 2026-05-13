@@ -6,6 +6,7 @@ const TABS = [
   { id: "email", label: "Email", href: "/settings/email" },
   { id: "messaging", label: "Messaging", href: "/settings/messaging" },
   { id: "connections", label: "AI connections", href: "/settings/connections" },
+  { id: "clubs", label: "Clubs", href: "/settings/clubs" },
   { id: "import", label: "Import", href: "/settings/import" },
   { id: "audit", label: "Audit log", href: "/settings/audit" },
 ] as const;
