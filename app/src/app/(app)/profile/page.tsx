@@ -3,6 +3,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/guards";
 import { formatHuman } from "@/lib/twilio/normalize";
+import { resolveLocale, SUPPORTED_LOCALES } from "@/i18n/request";
+import { setLocale } from "./locale-action";
 
 export default async function ProfilePage() {
   const session = await requireSession();
@@ -12,6 +14,7 @@ export default async function ProfilePage() {
     where: { id: session.user.id },
     include: { member: true },
   });
+  const currentLocale = await resolveLocale();
 
   return (
     <div className="max-w-xl space-y-4">
@@ -71,6 +74,36 @@ export default async function ProfilePage() {
           Notification preferences →
         </Link>
       </div>
+
+      <form
+        action={setLocale}
+        className="rounded-lg border border-gray-200 bg-white p-4"
+      >
+        <div className="mb-2 text-xs uppercase text-gray-500">Language</div>
+        <label className="flex items-center gap-2 text-sm">
+          <select
+            name="locale"
+            defaultValue={currentLocale}
+            className="rounded border border-gray-300 px-3 py-2"
+          >
+            {SUPPORTED_LOCALES.map((loc) => (
+              <option key={loc} value={loc}>
+                {loc === "en-US" ? "English (US)" : loc === "es-US" ? "Español (US)" : loc}
+              </option>
+            ))}
+          </select>
+          <button
+            type="submit"
+            className="rounded bg-black px-3 py-2 text-sm font-medium text-white"
+          >
+            Save
+          </button>
+        </label>
+        <p className="mt-2 text-xs text-gray-500">
+          Switches the language of the web app for this device. Set per-user
+          across devices is in a future round.
+        </p>
+      </form>
     </div>
   );
 }

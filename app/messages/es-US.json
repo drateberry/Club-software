@@ -1,0 +1,155 @@
+{
+  "app": {
+    "name": "Club OS"
+  },
+  "nav": {
+    "dashboard": "Tablero",
+    "members": "Socios",
+    "groups": "Grupos",
+    "committees": "Comités",
+    "events": "Eventos",
+    "calendar": "Calendario",
+    "finance": "Finanzas",
+    "invoices": "Facturas",
+    "houseAccounts": "Cuentas internas",
+    "compliance": "Cumplimiento",
+    "checkin": "Registro",
+    "messages": "Mensajes",
+    "tasks": "Tareas",
+    "feedback": "Comentarios",
+    "settings": "Configuración",
+    "profile": "Perfil",
+    "signOut": "Cerrar sesión"
+  },
+  "auth": {
+    "signIn": "Iniciar sesión",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "magicLink": "Envíame un enlace para iniciar sesión",
+    "or": "o",
+    "checkEmail": "Revisa tu correo",
+    "checkEmailDescription": "Te enviamos un enlace para iniciar sesión. Haz clic para continuar.",
+    "invalidCredentials": "Correo o contraseña no válidos.",
+    "linkSent": "Enlace para iniciar sesión enviado."
+  },
+  "home": {
+    "welcome": "Bienvenido a Club OS",
+    "tagline": "Gestión de socios para clubes de campo, yates y golf."
+  },
+  "dashboard": {
+    "title": "Tablero",
+    "totalMembers": "Socios activos",
+    "openInvoices": "Facturas pendientes",
+    "outstanding": "Saldo pendiente",
+    "upcomingEvents": "Próximos eventos",
+    "openTasks": "Tareas pendientes",
+    "noTasks": "Sin tareas pendientes.",
+    "noEvents": "Sin eventos próximos.",
+    "recentMembers": "Socios recientes"
+  },
+  "members": {
+    "title": "Socios",
+    "newMember": "Nuevo socio",
+    "name": "Nombre",
+    "memberNumber": "N° de socio",
+    "class": "Categoría",
+    "status": "Estado",
+    "email": "Correo electrónico",
+    "phone": "Teléfono",
+    "joined": "Ingresó",
+    "noResults": "No se encontraron socios.",
+    "search": "Buscar socios…",
+    "saveChanges": "Guardar cambios",
+    "delete": "Eliminar",
+    "confirmDelete": "¿Seguro que quieres eliminar este socio?",
+    "addresses": "Direcciones",
+    "dependents": "Dependientes",
+    "memberships": "Membresías",
+    "houseAccountBalance": "Saldo de cuenta interna",
+    "firstName": "Nombre",
+    "lastName": "Apellido",
+    "createdSuccess": "Socio creado."
+  },
+  "groups": {
+    "title": "Grupos",
+    "newGroup": "Nuevo grupo",
+    "name": "Nombre",
+    "description": "Descripción",
+    "memberCount": "Socios",
+    "noResults": "No se encontraron grupos.",
+    "noMembers": "Aún no hay socios en este grupo."
+  },
+  "committees": {
+    "title": "Comités",
+    "newCommittee": "Nuevo comité",
+    "noResults": "No se encontraron comités.",
+    "memberCount": "Socios"
+  },
+  "events": {
+    "title": "Eventos",
+    "noResults": "No hay eventos próximos.",
+    "venue": "Lugar",
+    "capacity": "Capacidad",
+    "ticketed": "Con entrada",
+    "free": "Gratis"
+  },
+  "calendar": {
+    "title": "Calendario",
+    "today": "Hoy",
+    "noEvents": "No hay eventos programados."
+  },
+  "tasks": {
+    "title": "Tareas",
+    "newTask": "Nueva tarea",
+    "open": "Abierta",
+    "inProgress": "En curso",
+    "done": "Hecha",
+    "archived": "Archivada",
+    "noTasks": "Aún no hay tareas."
+  },
+  "feedback": {
+    "title": "Comentarios",
+    "newFeedback": "Nuevo comentario",
+    "noFeedback": "Aún no hay comentarios.",
+    "page": "Página",
+    "submitted": "Enviado",
+    "status": "Estado"
+  },
+  "settings": {
+    "title": "Configuración",
+    "tabs": {
+      "branding": "Marca",
+      "locale": "Idioma",
+      "payments": "Pagos",
+      "email": "Correo",
+      "houseAccounts": "Cuentas internas",
+      "compliance": "Cumplimiento",
+      "users": "Usuarios y roles"
+    },
+    "branding": {
+      "clubName": "Nombre del club",
+      "logo": "Logotipo",
+      "primaryColor": "Color principal"
+    }
+  },
+  "profile": {
+    "title": "Perfil",
+    "name": "Nombre",
+    "email": "Correo electrónico",
+    "memberLink": "Socio vinculado"
+  },
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "edit": "Editar",
+    "back": "Atrás",
+    "loading": "Cargando…",
+    "error": "Algo salió mal.",
+    "yes": "Sí",
+    "no": "No",
+    "active": "Activo",
+    "suspended": "Suspendido",
+    "resigned": "Retirado",
+    "deceased": "Fallecido"
+  }
+}
