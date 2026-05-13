@@ -46,6 +46,13 @@ async function main() {
   await prisma.user.deleteMany();
   await prisma.member.deleteMany();
 
+  console.log("[seed] upserting default Club tenant");
+  await prisma.club.upsert({
+    where: { id: "default" },
+    create: { id: "default", slug: "default", name: process.env.CLUB_NAME ?? "Club OS" },
+    update: {},
+  });
+
   console.log("[seed] creating admin");
   const passwordHash = await bcrypt.hash("admin1234", 10);
   await prisma.user.create({

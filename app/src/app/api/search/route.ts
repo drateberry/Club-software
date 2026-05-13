@@ -2,10 +2,20 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { effectiveCapabilities, type Capability } from "@/lib/capabilities";
+import { enterTenantContext, enterOperatorContext, getTenantContext } from "@/lib/tenantContext";
 
 export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ results: [] }, { status: 401 });
+
+  if (!getTenantContext()) {
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { clubId: true, role: true },
+    });
+    if (user?.role === "OPERATOR") enterOperatorContext();
+    else enterTenantContext(user?.clubId ?? "default");
+  }
 
   const url = new URL(req.url);
   const q = url.searchParams.get("q")?.trim() ?? "";

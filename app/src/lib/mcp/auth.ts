@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { effectiveCapabilities, type Capability } from "@/lib/capabilities";
+import { enterTenantContext, enterOperatorContext, getTenantContext } from "@/lib/tenantContext";
 import type { ToolContext } from "./types";
 
 export function hashToken(raw: string): string {
@@ -40,6 +41,15 @@ export async function authenticateBearer(headerValue: string | null): Promise<Au
   // The effective scope is the intersection: a token cannot grant more than
   // its user has; the user's effective caps cap the token's scope.
   const effectiveScopes = tokenScopes.filter((s) => userEffective.includes(s));
+
+  // Pin tenant context so downstream Prisma queries auto-scope.
+  if (!getTenantContext()) {
+    if (token.user.role === "OPERATOR") {
+      enterOperatorContext();
+    } else {
+      enterTenantContext(token.clubId ?? token.user.clubId ?? "default");
+    }
+  }
 
   return {
     ok: true,

@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 
 /** Resolve an auth context from bearer first, then Auth.js session cookie. */
 async function resolveAuth(req: Request): Promise<
-  | { ok: true; userId: string; role: "ADMIN" | "STAFF" | "MEMBER"; effective: Capability[]; scopes: Capability[] }
+  | { ok: true; userId: string; role: "OPERATOR" | "ADMIN" | "STAFF" | "MEMBER"; effective: Capability[]; scopes: Capability[] }
   | { ok: false; status: 401 }
 > {
   const bearer = await authenticateBearer(req.headers.get("authorization"));

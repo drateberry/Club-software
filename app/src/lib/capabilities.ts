@@ -1,3 +1,5 @@
+export type Role = "OPERATOR" | "ADMIN" | "STAFF" | "MEMBER";
+
 export type Capability =
   | "members.read"
   | "members.write"
@@ -18,7 +20,9 @@ export type Capability =
   | "messaging.read"
   | "messaging.write"
   | "messaging.bulkSend"
-  | "payments.chargeOnFile";
+  | "payments.chargeOnFile"
+  | "operator.clubs"
+  | "operator.audit";
 
 const ADMIN_IMPLIED: Capability[] = [
   "members.read",
@@ -66,19 +70,35 @@ const MEMBER_IMPLIED: Capability[] = [
   "events.read",
 ];
 
+const OPERATOR_IMPLIED: Capability[] = [
+  ...ADMIN_IMPLIED,
+  "operator.clubs",
+  "operator.audit",
+];
+
 export function effectiveCapabilities(
-  role: "ADMIN" | "STAFF" | "MEMBER",
+  role: Role,
   explicit: Capability[]
 ): Capability[] {
   const implied =
-    role === "ADMIN" ? ADMIN_IMPLIED : role === "STAFF" ? STAFF_IMPLIED : MEMBER_IMPLIED;
+    role === "OPERATOR"
+      ? OPERATOR_IMPLIED
+      : role === "ADMIN"
+        ? ADMIN_IMPLIED
+        : role === "STAFF"
+          ? STAFF_IMPLIED
+          : MEMBER_IMPLIED;
   return Array.from(new Set([...implied, ...explicit]));
 }
 
 export function hasCapability(
-  role: "ADMIN" | "STAFF" | "MEMBER",
+  role: Role,
   explicit: Capability[],
   required: Capability
 ): boolean {
   return effectiveCapabilities(role, explicit).includes(required);
+}
+
+export function isOperator(role: Role): boolean {
+  return role === "OPERATOR";
 }

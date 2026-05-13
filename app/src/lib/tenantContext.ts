@@ -37,6 +37,20 @@ export function withTenant<T>(clubId: string, fn: () => Promise<T> | T): Promise
   return Promise.resolve(getStore().run({ clubId }, fn));
 }
 
+/**
+ * Pin the tenant context to the current async chain — no callback. Use
+ * this from guards (requireSession) so every Server Action automatically
+ * runs in the right tenant without wrapping its body. AsyncLocalStorage's
+ * enterWith persists the store across subsequent awaits in this chain.
+ */
+export function enterTenantContext(clubId: string): void {
+  getStore().enterWith({ clubId });
+}
+
+export function enterOperatorContext(): void {
+  getStore().enterWith({ clubId: "*", asOperator: true });
+}
+
 /** Operator scope — bypasses auto-injection. Use sparingly. */
 export function withOperatorScope<T>(fn: () => Promise<T> | T): Promise<T> {
   return Promise.resolve(getStore().run({ clubId: "*", asOperator: true }, fn));
