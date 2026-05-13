@@ -111,6 +111,25 @@ function makeClient() {
       $allModels: {
         async $allOperations({ args, query, model, operation }) {
           const augmented = applyTenantInjection(model, operation, args as AnyArgs);
+
+          // Mirror the tenant context to a Postgres session GUC so RLS
+          // policies (prisma/sql/enable-rls.sql) enforce isolation
+          // independently of the app layer. Only runs when RLS is
+          // actually enabled (env flag) — most deployments today are
+          // single-tenant per Postgres and don't need this overhead.
+          const ctx = getTenantContext();
+          if (ctx && process.env.CLUBOS_RLS_ENABLED === "1") {
+            const value = ctx.asOperator ? "*" : ctx.clubId;
+            try {
+              await base.$executeRawUnsafe(
+                "SELECT set_config('app.club_id', $1, true)",
+                value
+              );
+            } catch {
+              /* GUC set failures shouldn't break the query */
+            }
+          }
+
           return query(augmented);
         },
       },
