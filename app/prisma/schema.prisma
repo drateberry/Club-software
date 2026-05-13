@@ -110,6 +110,7 @@ enum MembershipStatus {
 
 model Member {
   id               String           @id @default(cuid())
+  clubId           String           @default("default")
   memberNumber     String?          @unique
   firstName        String
   lastName         String
@@ -129,6 +130,7 @@ model Member {
   updatedAt        DateTime         @updatedAt
   deletedAt        DateTime?
 
+  club      Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
   user      User?
   sponsor   Member?  @relation("MemberSponsor", fields: [sponsorId], references: [id], onDelete: SetNull)
   sponsored Member[] @relation("MemberSponsor")
@@ -153,9 +155,9 @@ model Member {
   twilioOptedOut    Boolean @default(false)
   stripeCustomerId  String? @unique
 
-  @@index([lastName, firstName])
-  @@index([membershipStatus])
-  @@index([deletedAt])
+  @@index([clubId, lastName, firstName])
+  @@index([clubId, membershipStatus])
+  @@index([clubId, deletedAt])
 }
 
 model Address {
@@ -192,6 +194,7 @@ model Dependent {
 
 model Group {
   id          String   @id @default(cuid())
+  clubId      String   @default("default")
   name        String
   description String?
   type        String?
@@ -200,9 +203,10 @@ model Group {
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime?
 
+  club        Club              @relation(fields: [clubId], references: [id], onDelete: Cascade)
   memberships GroupMembership[]
 
-  @@index([deletedAt])
+  @@index([clubId, deletedAt])
 }
 
 model GroupMembership {
@@ -219,15 +223,17 @@ model GroupMembership {
 
 model Committee {
   id          String   @id @default(cuid())
+  clubId      String   @default("default")
   name        String
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime?
 
+  club        Club                  @relation(fields: [clubId], references: [id], onDelete: Cascade)
   memberships CommitteeMembership[]
 
-  @@index([deletedAt])
+  @@index([clubId, deletedAt])
 }
 
 model CommitteeMembership {
@@ -248,6 +254,7 @@ model CommitteeMembership {
 
 model Event {
   id            String    @id @default(cuid())
+  clubId        String    @default("default")
   title         String
   description   String?
   startAt       DateTime
@@ -263,10 +270,11 @@ model Event {
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
 
+  club        Club              @relation(fields: [clubId], references: [id], onDelete: Cascade)
   attendances EventAttendance[]
 
-  @@index([startAt])
-  @@index([deletedAt])
+  @@index([clubId, startAt])
+  @@index([clubId, deletedAt])
 }
 
 enum AttendanceStatus {
@@ -359,6 +367,7 @@ enum PaymentStatus {
 
 model Invoice {
   id            String        @id @default(cuid())
+  clubId        String        @default("default")
   number        String        @unique
   memberId      String
   status        InvoiceStatus @default(DRAFT)
@@ -372,6 +381,7 @@ model Invoice {
   updatedAt     DateTime      @updatedAt
   paidAt        DateTime?
 
+  club         Club          @relation(fields: [clubId], references: [id], onDelete: Cascade)
   member       Member        @relation(fields: [memberId], references: [id], onDelete: Restrict)
   lines        InvoiceLine[]
   installments Installment[]
@@ -379,9 +389,9 @@ model Invoice {
   statement    Statement?
   houseCharges HouseCharge[]
 
-  @@index([memberId])
-  @@index([status])
-  @@index([dueDate])
+  @@index([clubId, memberId])
+  @@index([clubId, status])
+  @@index([clubId, dueDate])
 }
 
 model InvoiceLine {
@@ -465,6 +475,7 @@ model Refund {
 
 model HouseCharge {
   id           String   @id @default(cuid())
+  clubId       String   @default("default")
   memberId     String
   category     String
   amountCents  Int
@@ -474,26 +485,30 @@ model HouseCharge {
   invoiceId    String?
   createdAt    DateTime @default(now())
 
+  club     Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
   member   Member   @relation(fields: [memberId], references: [id], onDelete: Restrict)
   postedBy User?    @relation("HouseChargePostedBy", fields: [postedById], references: [id], onDelete: SetNull)
   invoice  Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
 
-  @@index([memberId, occurredOn])
-  @@index([invoiceId])
+  @@index([clubId, memberId, occurredOn])
+  @@index([clubId, invoiceId])
 }
 
 model Statement {
   id          String   @id @default(cuid())
+  clubId      String   @default("default")
   memberId    String
   periodStart DateTime @db.Date
   periodEnd   DateTime @db.Date
   invoiceId   String   @unique
   generatedAt DateTime @default(now())
 
+  club    Club    @relation(fields: [clubId], references: [id], onDelete: Cascade)
   member  Member  @relation(fields: [memberId], references: [id], onDelete: Restrict)
   invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@unique([memberId, periodStart])
+  @@index([clubId])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -509,6 +524,7 @@ enum ComplianceStatus {
 
 model ComplianceCertificate {
   id          String           @id @default(cuid())
+  clubId      String           @default("default")
   memberId    String
   type        String
   status      ComplianceStatus @default(PENDING)
@@ -518,10 +534,11 @@ model ComplianceCertificate {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
+  club   Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
   member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
-  @@index([memberId])
-  @@index([expiresOn])
+  @@index([clubId, memberId])
+  @@index([clubId, expiresOn])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -537,6 +554,7 @@ enum TaskStatus {
 
 model Task {
   id             String     @id @default(cuid())
+  clubId         String     @default("default")
   title          String
   description    String?
   dueDate        DateTime?  @db.Date
@@ -547,12 +565,13 @@ model Task {
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
+  club         Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
   assignee     User?    @relation("TaskAssignedTo", fields: [assigneeId], references: [id], onDelete: SetNull)
   createdBy    User     @relation("TaskCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   linkedMember Member?  @relation(fields: [linkedMemberId], references: [id], onDelete: SetNull)
 
-  @@index([assigneeId])
-  @@index([status])
+  @@index([clubId, assigneeId])
+  @@index([clubId, status])
 }
 
 enum FeedbackStatus {
@@ -564,6 +583,7 @@ enum FeedbackStatus {
 
 model Feedback {
   id        String         @id @default(cuid())
+  clubId    String         @default("default")
   memberId  String?
   page      String?
   message   String
@@ -571,18 +591,24 @@ model Feedback {
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 
+  club   Club    @relation(fields: [clubId], references: [id], onDelete: Cascade)
   member Member? @relation(fields: [memberId], references: [id], onDelete: SetNull)
+
+  @@index([clubId, status])
 }
 
 model Reminder {
   id          String    @id @default(cuid())
+  clubId      String    @default("default")
   kind        String
   dueAt       DateTime
   sentAt      DateTime?
   payloadJson Json
   createdAt   DateTime  @default(now())
 
-  @@index([dueAt, sentAt])
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@index([clubId, dueAt, sentAt])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -591,14 +617,16 @@ model Reminder {
 
 model CheckinLog {
   id        String   @id @default(cuid())
+  clubId    String   @default("default")
   memberId  String
   scannedAt DateTime @default(now())
   location  String?
   notes     String?
 
+  club   Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
   member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
-  @@index([memberId, scannedAt])
+  @@index([clubId, memberId, scannedAt])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -607,31 +635,43 @@ model CheckinLog {
 
 model Setting {
   key       String   @id
+  clubId    String   @default("default")
   valueJson Json
   updatedAt DateTime @updatedAt
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@index([clubId])
 }
 
 model MediaAsset {
   id           String   @id @default(cuid())
+  clubId       String   @default("default")
   url          String
   contentType  String
   sizeBytes    Int
   uploadedById String?
   createdAt    DateTime @default(now())
 
+  club       Club  @relation(fields: [clubId], references: [id], onDelete: Cascade)
   uploadedBy User? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([clubId])
 }
 
 model WebhookEvent {
   id              String    @id @default(cuid())
+  clubId          String    @default("default")
   providerName    String
   providerEventId String
   receivedAt      DateTime  @default(now())
   processedAt     DateTime?
   rawJson         Json
 
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
   @@unique([providerName, providerEventId])
-  @@index([processedAt])
+  @@index([clubId, processedAt])
 }
 
 model AuditEvent {
@@ -671,13 +711,28 @@ model Club {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Forward relations land incrementally as auto-scoping is wired.
-  // For v1 only User carries clubId — every other entity reaches the
-  // tenant via User → Club. Adding clubId to additional entities is
-  // additive and non-breaking; the parking lot tracks which to do
-  // next and in what order.
-  users       User[]
-  auditEvents AuditEvent[]
+  members         Member[]
+  groups          Group[]
+  committees      Committee[]
+  events          Event[]
+  invoices        Invoice[]
+  houseCharges    HouseCharge[]
+  statements      Statement[]
+  compliance      ComplianceCertificate[]
+  tasks           Task[]
+  feedback        Feedback[]
+  reminders       Reminder[]
+  checkinLogs     CheckinLog[]
+  conversations   Conversation[]
+  optOuts         OutboundOptOut[]
+  paymentMethods  SavedPaymentMethod[]
+  mcpClients      MCPClient[]
+  mcpTokens       MCPToken[]
+  settingRows     Setting[]
+  mediaAssets     MediaAsset[]
+  webhookEvents   WebhookEvent[]
+  auditEvents     AuditEvent[]
+  users           User[]
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -699,18 +754,20 @@ enum MessageStatus {
 
 model Conversation {
   id            String   @id @default(cuid())
+  clubId        String   @default("default")
   memberId      String?
   phone         String   @unique
   lastMessageAt DateTime @default(now())
   unread        Boolean  @default(false)
-  optedOut     Boolean  @default(false)
+  optedOut      Boolean  @default(false)
   createdAt     DateTime @default(now())
 
+  club     Club      @relation(fields: [clubId], references: [id], onDelete: Cascade)
   member   Member?   @relation(fields: [memberId], references: [id], onDelete: SetNull)
   messages Message[]
 
-  @@index([memberId, lastMessageAt])
-  @@index([lastMessageAt])
+  @@index([clubId, memberId, lastMessageAt])
+  @@index([clubId, lastMessageAt])
 }
 
 model Message {
@@ -736,8 +793,13 @@ model Message {
 
 model OutboundOptOut {
   phone     String   @id
+  clubId    String   @default("default")
   reason    String?
   createdAt DateTime @default(now())
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@index([clubId])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -747,6 +809,7 @@ model OutboundOptOut {
 
 model SavedPaymentMethod {
   id                    String        @id @default(cuid())
+  clubId                String        @default("default")
   memberId              String
   stripePaymentMethodId String        @unique
   kind                  PaymentMethod
@@ -757,9 +820,10 @@ model SavedPaymentMethod {
   isDefault             Boolean       @default(false)
   createdAt             DateTime      @default(now())
 
+  club   Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
   member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
-  @@index([memberId])
+  @@index([clubId, memberId])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -768,13 +832,17 @@ model SavedPaymentMethod {
 
 model MCPClient {
   id           String   @id @default(cuid())
+  clubId       String   @default("default")
   clientId     String   @unique
   name         String
   redirectUris Json
   createdAt    DateTime @default(now())
 
+  club           Club               @relation(fields: [clubId], references: [id], onDelete: Cascade)
   authorizations MCPAuthorization[]
   tokens         MCPToken[]
+
+  @@index([clubId])
 }
 
 model MCPAuthorization {
@@ -795,19 +863,21 @@ model MCPAuthorization {
 }
 
 model MCPToken {
-  id         String    @id @default(cuid())
-  userId     String
+  id          String    @id @default(cuid())
+  clubId      String    @default("default")
+  userId      String
   mcpClientId String
-  tokenHash  String    @unique
-  scopes     Json
-  expiresAt  DateTime
-  revokedAt  DateTime?
-  lastUsedAt DateTime?
-  createdAt  DateTime  @default(now())
+  tokenHash   String    @unique
+  scopes      Json
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
 
+  club      Club      @relation(fields: [clubId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   mcpClient MCPClient @relation(fields: [mcpClientId], references: [clientId], onDelete: Cascade)
 
-  @@index([userId])
+  @@index([clubId, userId])
   @@index([mcpClientId])
 }
