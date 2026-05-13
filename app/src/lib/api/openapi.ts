@@ -81,6 +81,21 @@ const eventShape: Record<string, unknown> = {
 
 const SPECS: RouteSpec[] = [
   {
+    method: "patch",
+    path: "/api/v1/me",
+    summary: "Update the authed member's own profile",
+    description: "Member-self-serve. Allowed fields: firstName, lastName, email, phone.",
+    scopes: [],
+    tags: ["identity"],
+    body: z.object({
+      firstName: z.string().min(1).max(100).optional(),
+      lastName: z.string().min(1).max(100).optional(),
+      email: z.string().email().optional(),
+      phone: z.string().max(50).optional(),
+    }),
+    responseSchema: memberShape,
+  },
+  {
     method: "get",
     path: "/api/v1/me",
     summary: "Current user",

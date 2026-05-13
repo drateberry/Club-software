@@ -87,6 +87,15 @@ export class ClubOSClient {
     return this.request("GET", "/api/v1/me");
   }
 
+  updateMe(args: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+  }): Promise<Member> {
+    return this.request("PATCH", "/api/v1/me", { body: args });
+  }
+
   // ── Members ─────────────────────────────────────────────────────────────
   listMembers(query: { search?: string; membershipStatus?: string; limit?: number; cursor?: string } = {}): Promise<Paginated<Member>> {
     return this.request("GET", "/api/v1/members", { query });
