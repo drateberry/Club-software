@@ -128,6 +128,31 @@ export async function voidInvoice(id: string) {
   revalidatePath(`/finance/invoices/${id}`);
 }
 
+export async function refundInvoiceAction(invoiceId: string, formData: FormData) {
+  const session = await requireCapability("payments.chargeOnFile");
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 200);
+  const { refundInvoice } = await import("@/lib/payments/refunds");
+  try {
+    const result = await refundInvoice({
+      invoiceId,
+      reason: reason || undefined,
+      actorUserId: session.user.id,
+    });
+    await logAudit(session.user.id, "invoice.void", "Invoice", invoiceId, {
+      action: "refund",
+      ...result,
+    });
+    revalidatePath(`/finance/invoices/${invoiceId}`);
+    redirect(
+      `/finance/invoices/${invoiceId}?ok=${encodeURIComponent(`Refunded ${(result.refundedCents / 100).toFixed(2)}`)}`
+    );
+  } catch (err) {
+    const message = (err as Error).message;
+    if (message.startsWith("NEXT_REDIRECT")) throw err;
+    redirect(`/finance/invoices/${invoiceId}?err=${encodeURIComponent(message)}`);
+  }
+}
+
 export async function chargeInvoiceOnFile(invoiceId: string) {
   const session = await requireCapability("payments.chargeOnFile");
   const invoice = await prisma.invoice.findUnique({

@@ -5,7 +5,7 @@ import { requireCapability } from "@/lib/guards";
 import { hasCapability, type Capability } from "@/lib/capabilities";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { sendInvoice, voidInvoice, chargeInvoiceOnFile } from "../actions";
+import { sendInvoice, voidInvoice, chargeInvoiceOnFile, refundInvoiceAction } from "../actions";
 
 export default async function InvoiceDetailPage({
   params,
@@ -136,7 +136,35 @@ export default async function InvoiceDetailPage({
         </p>
       </section>
 
-      {canChargeOnFile && defaultPm && invoice.status !== "PAID" && invoice.status !== "VOID" && (
+      {canChargeOnFile && invoice.status === "PAID" && (
+        <section className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <h2 className="mb-2 text-sm font-semibold text-amber-900">Refund</h2>
+          <p className="mb-3 text-xs text-amber-900">
+            Refunds all SUCCEEDED Stripe payments on this invoice. Invoice
+            transitions to REFUNDED, Payment rows update, member sees the
+            refund on their statement. Cannot be undone.
+          </p>
+          <form action={refundInvoiceAction.bind(null, invoice.id)} className="space-y-2">
+            <input
+              type="text"
+              name="reason"
+              placeholder="Reason (optional, max 200 chars)"
+              maxLength={200}
+              className="block w-full rounded border border-amber-300 bg-white px-3 py-2 text-sm"
+            />
+            <ConfirmButton
+              message={`Refund the full amount on invoice ${invoice.number}? This cannot be reversed.`}
+              confirmLabel="Refund"
+              pendingLabel="Refunding…"
+              variant="danger"
+            >
+              Refund invoice
+            </ConfirmButton>
+          </form>
+        </section>
+      )}
+
+      {canChargeOnFile && defaultPm && invoice.status !== "PAID" && invoice.status !== "VOID" && invoice.status !== "REFUNDED" && (
         <section className="rounded-lg border border-blue-200 bg-blue-50 p-4">
           <h2 className="mb-2 text-sm font-semibold text-blue-900">Charge card on file</h2>
           <p className="mb-3 text-xs text-blue-900">
@@ -172,7 +200,7 @@ export default async function InvoiceDetailPage({
               </button>
             </form>
           )}
-          {invoice.status !== "PAID" && invoice.status !== "VOID" && (
+          {invoice.status !== "PAID" && invoice.status !== "VOID" && invoice.status !== "REFUNDED" && (
             <form action={voidIt}>
               <button
                 type="submit"

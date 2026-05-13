@@ -114,6 +114,11 @@ export class ClubOSClient {
   chargeInvoice(id: string): Promise<{ paymentIntentId: string; status: string; amountCents: number }> {
     return this.request("POST", `/api/v1/invoices/${encodeURIComponent(id)}/charge`);
   }
+  refundInvoice(id: string, reason?: string): Promise<{ invoiceId: string; refundedCents: number; refundIds: string[] }> {
+    return this.request("POST", `/api/v1/invoices/${encodeURIComponent(id)}/refund`, {
+      body: reason ? { reason } : {},
+    });
+  }
 
   // ── Events ──────────────────────────────────────────────────────────────
   listEvents(query: { upcoming?: boolean; limit?: number } = {}): Promise<{ data: EventListItem[] }> {

@@ -47,6 +47,7 @@ model User {
   sentMessages       Message[]     @relation("MessageSentBy")
   mcpAuthorizations  MCPAuthorization[]
   mcpTokens          MCPToken[]
+  createdRefunds     Refund[]
 }
 
 model Account {
@@ -321,6 +322,7 @@ enum InvoiceStatus {
   SENT
   PAID
   VOID
+  REFUNDED
 }
 
 enum InvoiceKind {
@@ -427,9 +429,29 @@ model Payment {
 
   invoice          Invoice?          @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
   eventAttendances EventAttendance[]
+  refunds          Refund[]
 
   @@index([invoiceId])
   @@index([providerName, providerPaymentId])
+}
+
+model Refund {
+  id                String   @id @default(cuid())
+  paymentId         String
+  amountCents       Int
+  currency          String   @default("USD")
+  reason            String?
+  providerName      String
+  providerRefundId  String   @unique
+  status            String   @default("succeeded")
+  rawWebhookJson    Json?
+  createdById       String?
+  createdAt         DateTime @default(now())
+
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  createdBy User?   @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([paymentId])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

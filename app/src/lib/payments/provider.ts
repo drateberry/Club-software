@@ -39,6 +39,13 @@ export type WebhookMatch =
       kind: "payment_method_detached";
       paymentMethodId: string;
     }
+  | {
+      kind: "refund_processed";
+      providerRefundId: string;
+      paymentIntentId: string | null;
+      amountCents: number;
+      status: string;
+    }
   | { kind: "ignored" };
 
 export type ProcessedWebhook = {

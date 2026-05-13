@@ -75,6 +75,47 @@ export const StripeProvider: PaymentProvider = {
       raw,
     });
 
+    if (event.type === "charge.refunded" || event.type === "refund.created" || event.type === "refund.updated") {
+      const refundOrCharge = event.data.object as Stripe.Refund | Stripe.Charge;
+      // Stripe sends two event types depending on age; both share the
+      // refunds array on a charge or a single refund object.
+      let refundId: string | null = null;
+      let paymentIntentId: string | null = null;
+      let amountCents = 0;
+      let status: string = "succeeded";
+      if ((refundOrCharge as Stripe.Refund).object === "refund") {
+        const r = refundOrCharge as Stripe.Refund;
+        refundId = r.id;
+        paymentIntentId =
+          typeof r.payment_intent === "string"
+            ? r.payment_intent
+            : r.payment_intent?.id ?? null;
+        amountCents = r.amount;
+        status = r.status ?? "succeeded";
+      } else {
+        const c = refundOrCharge as Stripe.Charge;
+        const latest = c.refunds?.data?.[c.refunds.data.length - 1];
+        if (!latest) return ignored();
+        refundId = latest.id;
+        paymentIntentId =
+          typeof c.payment_intent === "string" ? c.payment_intent : null;
+        amountCents = latest.amount;
+        status = latest.status ?? "succeeded";
+      }
+      if (!refundId) return ignored();
+      return {
+        providerEventId: event.id,
+        match: {
+          kind: "refund_processed",
+          providerRefundId: refundId,
+          paymentIntentId,
+          amountCents,
+          status,
+        },
+        raw,
+      };
+    }
+
     if (event.type === "payment_method.attached") {
       const pm = event.data.object as Stripe.PaymentMethod;
       const customerId = typeof pm.customer === "string" ? pm.customer : pm.customer?.id;

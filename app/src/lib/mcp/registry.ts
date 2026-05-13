@@ -3,6 +3,7 @@ import { memberTools } from "./tools/members";
 import { memberWriteTools } from "./tools/membersWrite";
 import { invoiceTools } from "./tools/invoices";
 import { invoiceWriteTools } from "./tools/invoicesWrite";
+import { invoiceRefundTools } from "./tools/invoicesRefund";
 import { eventTools } from "./tools/events";
 import { eventWriteTools } from "./tools/eventsWrite";
 import { houseAccountTools } from "./tools/houseAccounts";
@@ -19,6 +20,7 @@ export function allTools(): Tool[] {
     ...memberWriteTools,
     ...invoiceTools,
     ...invoiceWriteTools,
+    ...invoiceRefundTools,
     ...eventTools,
     ...eventWriteTools,
     ...houseAccountTools,

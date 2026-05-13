@@ -109,6 +109,37 @@ export async function POST(req: Request) {
     });
   } else if (processed.match.kind === "payment_method_detached") {
     await syncDetachedPaymentMethod(processed.match.paymentMethodId);
+  } else if (processed.match.kind === "refund_processed") {
+    const m = processed.match;
+    const payment = m.paymentIntentId
+      ? await prisma.payment.findUnique({ where: { providerPaymentId: m.paymentIntentId } })
+      : null;
+    if (payment) {
+      await prisma.refund.upsert({
+        where: { providerRefundId: m.providerRefundId },
+        create: {
+          paymentId: payment.id,
+          amountCents: m.amountCents,
+          currency: payment.currency,
+          providerName: "stripe",
+          providerRefundId: m.providerRefundId,
+          status: m.status,
+        },
+        update: { status: m.status },
+      });
+      if (m.status === "succeeded") {
+        await prisma.payment.update({
+          where: { id: payment.id },
+          data: { status: "REFUNDED" },
+        });
+        if (payment.invoiceId) {
+          await prisma.invoice.update({
+            where: { id: payment.invoiceId },
+            data: { status: "REFUNDED" },
+          });
+        }
+      }
+    }
   }
 
   await prisma.webhookEvent.update({

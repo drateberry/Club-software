@@ -168,6 +168,24 @@ const SPECS: RouteSpec[] = [
   },
   {
     method: "post",
+    path: "/api/v1/invoices/{id}/refund",
+    summary: "Refund a PAID invoice",
+    description: "Full-invoice refund only in v1. Member tokens forbidden.",
+    scopes: ["payments.chargeOnFile"],
+    pathParams: ["id"],
+    tags: ["invoices"],
+    body: z.object({ reason: z.string().max(200).optional() }),
+    responseSchema: {
+      type: "object",
+      properties: {
+        invoiceId: { type: "string" },
+        refundedCents: { type: "integer" },
+        refundIds: { type: "array", items: { type: "string" } },
+      },
+    },
+  },
+  {
+    method: "post",
     path: "/api/v1/invoices/{id}/charge",
     summary: "Charge the default card on file",
     description: "Charges the next unpaid installment (or full invoice if no plan). Member tokens forbidden.",
