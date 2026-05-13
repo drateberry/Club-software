@@ -56,6 +56,14 @@ export default async function InvoicesPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">{t("nav.invoices")}</h1>
+        <div className="flex gap-2">
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a
+            href="/api/v1/exports/invoices"
+            className="rounded border border-gray-300 bg-white px-3 py-2 text-sm hover:bg-gray-50"
+          >
+            Export CSV
+          </a>
         {canWrite && (
           <Link
             href="/finance/invoices/new"
@@ -64,6 +72,7 @@ export default async function InvoicesPage({
             New invoice
           </Link>
         )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

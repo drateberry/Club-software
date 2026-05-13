@@ -185,4 +185,9 @@ export class ClubOSClient {
   openCustomerPortal(args: { memberId?: string; returnUrl?: string } = {}): Promise<{ url: string }> {
     return this.request("POST", "/api/v1/payment-methods/portal", { body: args });
   }
+
+  // ── Exports ────────────────────────────────────────────────────────────
+  exportUrl(entity: "members" | "invoices" | "house-charges" | "events"): string {
+    return `${this.opts.baseUrl}/api/v1/exports/${entity}`;
+  }
 }

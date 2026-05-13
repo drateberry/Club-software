@@ -40,14 +40,23 @@ export default async function HouseAccountsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">House Accounts</h1>
-        {canWrite && (
-          <Link
-            href="/house-accounts/charge"
-            className="rounded bg-black px-3 py-2 text-sm font-medium text-white"
+        <div className="flex gap-2">
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a
+            href="/api/v1/exports/house-charges"
+            className="rounded border border-gray-300 bg-white px-3 py-2 text-sm hover:bg-gray-50"
           >
-            Add charge
-          </Link>
-        )}
+            Export CSV
+          </a>
+          {canWrite && (
+            <Link
+              href="/house-accounts/charge"
+              className="rounded bg-black px-3 py-2 text-sm font-medium text-white"
+            >
+              Add charge
+            </Link>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
