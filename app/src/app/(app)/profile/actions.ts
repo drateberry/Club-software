@@ -53,3 +53,29 @@ export async function updateMyProfile(formData: FormData) {
   revalidatePath(`/members/${me.memberId}`);
   redirect("/profile?ok=Profile%20updated");
 }
+
+const TRIGGERS = ["invoice.sent", "payment.received", "rsvp.confirmed", "statement.generated"] as const;
+const CHANNELS = ["sms", "email"] as const;
+
+export async function saveNotificationPrefs(formData: FormData) {
+  const session = await requireSession();
+
+  const prefs: Record<string, Record<string, boolean>> = {};
+  for (const channel of CHANNELS) {
+    prefs[channel] = {};
+    for (const trigger of TRIGGERS) {
+      prefs[channel][trigger] = formData.get(`${channel}.${trigger}`) === "on";
+    }
+  }
+
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { notificationPrefs: prefs as never },
+  });
+  await logAudit(session.user.id, "settings.update", "User", session.user.id, {
+    action: "notificationPrefs",
+  });
+
+  revalidatePath("/profile/notifications");
+  redirect("/profile/notifications?ok=Preferences%20saved");
+}

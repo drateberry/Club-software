@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { getQueue, QUEUES } from "@/lib/jobs/queue";
 import { toE164 } from "./normalize";
 import type { SendArgs } from "./send";
+import { isTriggerEnabledForMember } from "@/lib/notifications/prefs";
 
 export type TriggerKey =
   | "invoice.sent"
@@ -57,6 +58,11 @@ export async function enqueueTriggered(
   const triggers = await loadTriggers();
   const config = triggers[trigger];
   if (!config?.enabled) return;
+
+  // Per-user opt-out: even if the club-wide trigger is enabled, members
+  // can disable specific notifications for themselves in /profile/notifications.
+  const memberEnabled = await isTriggerEnabledForMember(args.memberId, trigger, "sms");
+  if (!memberEnabled) return;
 
   const member = await prisma.member.findUnique({
     where: { id: args.memberId },
